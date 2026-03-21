@@ -16,14 +16,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const hideNav = HIDE_NAV_PATHS.some((p) => router.pathname.startsWith(p))
 
   return (
-    <div className="relative mx-auto flex h-full max-w-[430px] flex-col overflow-hidden bg-background">
-      <main className="hide-scrollbar flex-1 overflow-y-auto overflow-x-hidden pb-20">
-        {children}
+    <div className="mx-auto flex h-full max-h-dvh max-w-[430px] flex-col overflow-hidden bg-background">
+      <main className="hide-scrollbar flex-1 overflow-y-auto overflow-x-hidden">
+        <div className={hideNav ? "" : "pb-16"}>
+          {children}
+        </div>
       </main>
 
       {!hideNav && (
-        <nav
-          className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-border/40 bg-background/80 backdrop-blur-xl"
+        <div
+          className="shrink-0 border-t border-border/40 bg-background/80 backdrop-blur-xl"
           style={{ paddingBottom: "var(--safe-bottom)" }}
           role="navigation"
           aria-label="Main navigation"
@@ -61,7 +63,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               )
             })}
           </div>
-        </nav>
+        </div>
       )}
     </div>
   )

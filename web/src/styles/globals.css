@@ -140,16 +140,13 @@
   }
 }
 
-/* Mobile shell */
-html, body {
-  height: 100%;
+/* Mobile shell — lock to viewport, only main scrolls */
+html, body, #__next {
+  height: 100dvh;
+  max-height: 100dvh;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-#__next {
-  height: 100%;
 }
 
 /* Hide scrollbars but keep scrolling */
