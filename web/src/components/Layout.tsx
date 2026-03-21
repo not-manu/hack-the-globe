@@ -17,21 +17,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="relative mx-auto flex h-full max-w-[430px] flex-col overflow-hidden bg-background">
-      <main className="hide-scrollbar flex-1 overflow-y-auto overflow-x-hidden pb-24">
+      <main className="hide-scrollbar flex-1 overflow-y-auto overflow-x-hidden pb-20">
         {children}
       </main>
 
       {!hideNav && (
         <nav
-          className="pointer-events-none fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 px-4 pb-[calc(8px+var(--safe-bottom))] pt-2"
-          style={{
-            background:
-              "linear-gradient(to top, var(--background) 40%, transparent)",
-          }}
+          className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-border/40 bg-background/80 backdrop-blur-xl"
+          style={{ paddingBottom: "var(--safe-bottom)" }}
           role="navigation"
           aria-label="Main navigation"
         >
-          <div className="pointer-events-auto flex items-center justify-around rounded-full border border-border/60 bg-card/90 px-2 py-1 shadow-lg backdrop-blur-xl">
+          <div className="flex items-center justify-around px-6 py-2">
             {NAV_ITEMS.map((item) => {
               const isActive = router.pathname === item.path
               const Icon = item.icon
@@ -42,12 +39,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     key={item.path}
                     onClick={() => router.push(item.path)}
                     aria-label={item.label}
-                    className="-my-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition-transform active:scale-90"
-                    style={{
-                      boxShadow: "0 4px 14px rgba(22,163,74,0.3)",
-                    }}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-90"
                   >
-                    <Icon size={22} strokeWidth={2.5} />
+                    <Icon size={20} strokeWidth={2} />
                   </button>
                 )
               }
@@ -58,19 +52,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   onClick={() => router.push(item.path)}
                   aria-label={item.label}
                   aria-current={isActive ? "page" : undefined}
-                  className={`flex flex-col items-center gap-0.5 rounded-full px-3 py-2 transition-colors ${
-                    isActive
-                      ? "bg-accent text-primary"
-                      : "text-muted-foreground"
+                  className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+                    isActive ? "text-primary" : "text-muted-foreground"
                   }`}
                 >
-                  <Icon
-                    size={20}
-                    strokeWidth={isActive ? 2.5 : 1.5}
-                  />
-                  <span className="text-[10px] font-semibold leading-none tracking-wide">
-                    {item.label}
-                  </span>
+                  <Icon size={22} strokeWidth={isActive ? 2.2 : 1.5} />
                 </button>
               )
             })}

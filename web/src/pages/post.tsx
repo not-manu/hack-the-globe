@@ -289,7 +289,6 @@ export default function PostMaterial() {
             <Button
               className="flex-1 py-6"
               onClick={() => {
-                alert("Listing posted! (mockup)")
                 router.push("/")
               }}
             >

@@ -112,7 +112,7 @@ export default function Profile() {
               <button
                 key={label}
                 className={`animate-fade-up stagger-${i + 1} flex w-full items-center gap-3.5 rounded-2xl border border-border bg-card p-3.5 text-left transition-all active:scale-[0.98]`}
-                onClick={() => alert(`${label} (coming soon)`)}
+                onClick={() => {}}
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
                   <Icon size={18} className="text-muted-foreground" />
@@ -127,7 +127,7 @@ export default function Profile() {
         {/* Sign out */}
         <button
           className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card p-3.5 text-sm font-semibold text-destructive transition-all active:scale-[0.98]"
-          onClick={() => alert("Sign out (coming soon)")}
+          onClick={() => {}}
         >
           <LogOut size={16} />
           Sign Out
