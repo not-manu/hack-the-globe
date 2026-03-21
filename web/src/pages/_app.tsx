@@ -2,16 +2,9 @@ import "@/styles/globals.css"
 import { useState, useEffect } from "react"
 import type { AppProps } from "next/app"
 import { ConvexProvider, ConvexReactClient } from "convex/react"
-import { Outfit } from "next/font/google"
 import Layout from "@/components/Layout"
 import Logo from "@/components/Logo"
 import { Leaf } from "lucide-react"
-
-const outfit = Outfit({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
-})
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
@@ -49,7 +42,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <ConvexProvider client={convex}>
-      <div className={`${outfit.variable} font-sans`} style={{ height: "100%" }}>
+      <div style={{ height: "100%" }}>
         {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
         <Layout>
           <Component {...pageProps} />
