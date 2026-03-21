@@ -63,9 +63,9 @@ export default function ListingDetail() {
     <div className="animate-fade-in">
       {/* Hero image */}
       <div className="relative h-64 overflow-hidden bg-muted">
-        {listing.image && (
+        {(listing.imageUrl || listing.image) && (
           <img
-            src={listing.image}
+            src={listing.imageUrl ?? listing.image}
             alt={listing.title}
             className="h-full w-full object-cover"
           />

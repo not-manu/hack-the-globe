@@ -101,9 +101,9 @@ export default function Home() {
                   className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-3 text-left transition-all active:scale-[0.98]"
                 >
                   <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
-                    {listing.image && (
+                    {(listing.imageUrl || listing.image) && (
                       <img
-                        src={listing.image}
+                        src={listing.imageUrl ?? listing.image}
                         alt={listing.title}
                         className="h-full w-full object-cover"
                         loading="lazy"

@@ -14,7 +14,10 @@ export default defineSchema({
     sellerVerified: v.boolean(),
     sellerTransactions: v.number(),
     carbonSaved: v.number(),
-    image: v.string(),
+    // Legacy: plain URL string. New listings use `images` array.
+    image: v.optional(v.string()),
+    // New: array of Convex storage IDs
+    images: v.optional(v.array(v.id("_storage"))),
     condition: v.string(),
     description: v.string(),
     location: v.string(),

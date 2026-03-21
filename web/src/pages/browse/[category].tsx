@@ -131,9 +131,9 @@ export default function Browse() {
                   className={`animate-fade-up stagger-${(i % 6) + 1} w-full overflow-hidden rounded-2xl border border-border bg-card text-left transition-all active:scale-[0.97]`}
                 >
                   <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-                    {listing.image && (
+                    {(listing.imageUrl || listing.image) && (
                       <img
-                        src={listing.image}
+                        src={listing.imageUrl ?? listing.image}
                         alt={listing.title}
                         className="h-full w-full object-cover"
                         loading="lazy"

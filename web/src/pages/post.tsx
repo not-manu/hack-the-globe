@@ -1,5 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react"
 import { useRouter } from "next/router"
+import { useMutation } from "convex/react"
+import { api } from "../../convex/_generated/api"
+import type { Id } from "../../convex/_generated/dataModel"
 import {
   ArrowLeft,
   Camera,
@@ -8,6 +11,7 @@ import {
   SwitchCamera,
   ImageIcon,
   Leaf,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -42,11 +46,15 @@ const SCAN_PHRASES = [
 
 export default function PostMaterial() {
   const router = useRouter()
+  const generateUploadUrl = useMutation(api.listings.generateUploadUrl)
+  const createListing = useMutation(api.listings.create)
+
   const [photos, setPhotos] = useState<string[]>([])
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState("")
   const [price, setPrice] = useState("")
   const [location, setLocation] = useState("")
+  const [posting, setPosting] = useState(false)
 
   const [showCamera, setShowCamera] = useState(false)
   const [scanning, setScanning] = useState(false)
@@ -180,8 +188,46 @@ export default function PostMaterial() {
     }
   }
 
-  const canPost = title && category && price
+  const canPost = title && category && price && !posting
   const hasStarted = photos.length > 0 || scanning || scanResult
+
+  const handlePost = async () => {
+    if (!canPost) return
+    setPosting(true)
+    try {
+      // Upload each photo to Convex storage
+      const storageIds: Id<"_storage">[] = []
+      for (const dataUrl of photos) {
+        const blob = await dataUrlToBlob(dataUrl)
+        const uploadUrl = await generateUploadUrl()
+        const res = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": blob.type },
+          body: blob,
+        })
+        const { storageId } = await res.json()
+        storageIds.push(storageId)
+      }
+
+      await createListing({
+        title,
+        category,
+        price: parseFloat(price),
+        condition: scanResult?.condition ?? "Good",
+        description: scanResult?.description ?? title,
+        location: location || "Toronto, ON",
+        carbonSaved: scanResult?.carbonSaved ?? 0,
+        images: storageIds,
+      })
+
+      router.push("/")
+    } catch (err) {
+      console.error("Failed to post listing:", err)
+      alert("Failed to post listing. Please try again.")
+    } finally {
+      setPosting(false)
+    }
+  }
 
   return (
     <>
@@ -442,9 +488,16 @@ export default function PostMaterial() {
         <Button
           className="w-full py-5"
           disabled={!canPost}
-          onClick={() => router.push("/")}
+          onClick={handlePost}
         >
-          Post Listing
+          {posting ? (
+            <span className="flex items-center gap-2">
+              <Loader2 size={16} className="animate-spin" />
+              Uploading...
+            </span>
+          ) : (
+            "Post Listing"
+          )}
         </Button>
       </div>
 
@@ -486,4 +539,8 @@ export default function PostMaterial() {
       `}</style>
     </>
   )
+}
+
+function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+  return fetch(dataUrl).then((r) => r.blob())
 }
