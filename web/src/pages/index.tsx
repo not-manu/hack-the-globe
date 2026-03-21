@@ -1,399 +1,254 @@
-import { useState } from "react"
-import { useQuery, useMutation } from "convex/react"
+import { useRouter } from "next/router"
+import { useQuery } from "convex/react"
 import { api } from "../../convex/_generated/api"
-import type { Id } from "../../convex/_generated/dataModel"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Search, Leaf, Clock, ChevronRight, Megaphone, Sparkles } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog"
+import Logo from "@/components/Logo"
 
 const CATEGORIES = [
-  { id: "lumber", label: "Lumber", icon: "🪵" },
-  { id: "steel", label: "Steel & Metal", icon: "🔩" },
-  { id: "concrete", label: "Concrete", icon: "🧱" },
-  { id: "brick", label: "Brick", icon: "🏗️" },
-  { id: "glass", label: "Glass", icon: "🪟" },
-  { id: "pipe", label: "Piping", icon: "🔧" },
-  { id: "electrical", label: "Electrical", icon: "💡" },
-  { id: "fixtures", label: "Fixtures", icon: "🚿" },
+  { id: "lumber", label: "Lumber", icon: "\u{1FAB5}", count: 12 },
+  { id: "steel", label: "Steel", icon: "\u{1F529}", count: 8 },
+  { id: "concrete", label: "Concrete", icon: "\u{1F9F1}", count: 15 },
+  { id: "brick", label: "Brick", icon: "\u{1F3D7}\u{FE0F}", count: 6 },
+  { id: "glass", label: "Glass", icon: "\u{1FA9F}", count: 4 },
+  { id: "pipe", label: "Piping", icon: "\u{1F527}", count: 9 },
+  { id: "electrical", label: "Electrical", icon: "\u{1F4A1}", count: 7 },
+  { id: "fixtures", label: "Fixtures", icon: "\u{1F6BF}", count: 3 },
 ]
 
-const URGENCIES = ["Urgent", "This week", "Flexible"]
-
-function CreateRequestForm({ onClose }: { onClose: () => void }) {
-  const create = useMutation(api.requests.create)
-  const [form, setForm] = useState({
-    title: "",
-    category: "",
-    budget: "",
-    urgency: "Flexible",
-    requester: "",
-  })
-
-  const update = (key: string, value: string) =>
-    setForm((prev) => ({ ...prev, [key]: value }))
-
-  const handleSubmit = async () => {
-    if (!form.title || !form.category || !form.requester) return
-    await create(form)
-    onClose()
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="space-y-2">
-        <Label htmlFor="req-title">What do you need?</Label>
-        <Input
-          id="req-title"
-          placeholder='e.g. "4x8 plywood sheets"'
-          value={form.title}
-          onChange={(e) => update("title", e.target.value)}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Category</Label>
-        <div className="flex flex-wrap gap-1.5">
-          {CATEGORIES.map((c) => (
-            <Button
-              key={c.id}
-              type="button"
-              size="sm"
-              variant={form.category === c.id ? "default" : "outline"}
-              onClick={() => update("category", c.id)}
-            >
-              {c.icon} {c.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label htmlFor="budget">Budget</Label>
-          <Input
-            id="budget"
-            placeholder='e.g. "$200-400"'
-            value={form.budget}
-            onChange={(e) => update("budget", e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Urgency</Label>
-          <div className="flex flex-wrap gap-1.5">
-            {URGENCIES.map((u) => (
-              <Button
-                key={u}
-                type="button"
-                size="xs"
-                variant={form.urgency === u ? "default" : "outline"}
-                onClick={() => update("urgency", u)}
-              >
-                {u}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="requester">Your name</Label>
-        <Input
-          id="requester"
-          placeholder="e.g. Sarah M."
-          value={form.requester}
-          onChange={(e) => update("requester", e.target.value)}
-        />
-      </div>
-
-      <DialogFooter>
-        <DialogClose asChild>
-          <Button variant="outline">Cancel</Button>
-        </DialogClose>
-        <Button
-          onClick={handleSubmit}
-          disabled={!form.title || !form.category || !form.requester}
-        >
-          Post Request
-        </Button>
-      </DialogFooter>
-    </div>
-  )
-}
-
-function EditRequestForm({
-  request,
-  onClose,
-}: {
-  request: {
-    _id: Id<"requests">
-    title: string
-    category: string
-    budget: string
-    urgency: string
-    requester: string
-  }
-  onClose: () => void
-}) {
-  const remove = useMutation(api.requests.remove)
-  const create = useMutation(api.requests.create)
-  const [form, setForm] = useState({
-    title: request.title,
-    category: request.category,
-    budget: request.budget,
-    urgency: request.urgency,
-    requester: request.requester,
-  })
-
-  const update = (key: string, value: string) =>
-    setForm((prev) => ({ ...prev, [key]: value }))
-
-  const handleUpdate = async () => {
-    if (!form.title || !form.category || !form.requester) return
-    await remove({ id: request._id })
-    await create(form)
-    onClose()
-  }
-
-  const handleDelete = async () => {
-    await remove({ id: request._id })
-    onClose()
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="space-y-2">
-        <Label htmlFor="edit-title">What do you need?</Label>
-        <Input
-          id="edit-title"
-          value={form.title}
-          onChange={(e) => update("title", e.target.value)}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Category</Label>
-        <div className="flex flex-wrap gap-1.5">
-          {CATEGORIES.map((c) => (
-            <Button
-              key={c.id}
-              type="button"
-              size="sm"
-              variant={form.category === c.id ? "default" : "outline"}
-              onClick={() => update("category", c.id)}
-            >
-              {c.icon} {c.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label htmlFor="edit-budget">Budget</Label>
-          <Input
-            id="edit-budget"
-            value={form.budget}
-            onChange={(e) => update("budget", e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Urgency</Label>
-          <div className="flex flex-wrap gap-1.5">
-            {URGENCIES.map((u) => (
-              <Button
-                key={u}
-                type="button"
-                size="xs"
-                variant={form.urgency === u ? "default" : "outline"}
-                onClick={() => update("urgency", u)}
-              >
-                {u}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="edit-requester">Your name</Label>
-        <Input
-          id="edit-requester"
-          value={form.requester}
-          onChange={(e) => update("requester", e.target.value)}
-        />
-      </div>
-
-      <DialogFooter className="flex gap-2">
-        <Button variant="destructive" onClick={handleDelete}>
-          Delete
-        </Button>
-        <div className="flex-1" />
-        <DialogClose asChild>
-          <Button variant="outline">Cancel</Button>
-        </DialogClose>
-        <Button
-          onClick={handleUpdate}
-          disabled={!form.title || !form.category || !form.requester}
-        >
-          Save Changes
-        </Button>
-      </DialogFooter>
-    </div>
-  )
-}
-
-function RequestCard({
-  request,
-}: {
-  request: {
-    _id: Id<"requests">
-    title: string
-    category: string
-    budget: string
-    urgency: string
-    requester: string
-  }
-}) {
-  const [open, setOpen] = useState(false)
-  const categoryInfo = CATEGORIES.find((c) => c.id === request.category)
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Card className="cursor-pointer transition-shadow hover:shadow-md">
-          <CardHeader className="pb-2">
-            <div className="flex items-start justify-between">
-              <Badge
-                variant={request.urgency === "Urgent" ? "destructive" : "secondary"}
-              >
-                {request.urgency}
-              </Badge>
-              {categoryInfo && (
-                <span className="text-lg">{categoryInfo.icon}</span>
-              )}
-            </div>
-            <CardTitle className="text-sm leading-tight">
-              {request.title}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="text-xs">
-              Budget: {request.budget || "Not specified"}
-            </CardDescription>
-            <p className="mt-1 text-xs text-muted-foreground">
-              by {request.requester}
-            </p>
-          </CardContent>
-        </Card>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edit Request</DialogTitle>
-          <DialogDescription>
-            Update or remove this material request.
-          </DialogDescription>
-        </DialogHeader>
-        <EditRequestForm request={request} onClose={() => setOpen(false)} />
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 export default function Home() {
+  const router = useRouter()
+  const listings = useQuery(api.listings.list)
   const requests = useQuery(api.requests.list)
-  const [createOpen, setCreateOpen] = useState(false)
+
+  const recentListings = listings?.slice(0, 3)
 
   return (
-    <div className="mx-auto min-h-screen max-w-2xl px-4 py-8">
+    <>
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">ScrapYard</h1>
-          <p className="text-sm text-muted-foreground">
-            Construction surplus materials marketplace
-          </p>
+      <div className="sticky top-0 z-40 bg-background/80 px-5 pb-3 pt-4 backdrop-blur-lg">
+        <div className="flex items-center justify-between">
+          <Logo height={28} />
+          <Badge variant="secondary" className="gap-1 border-green-bg-dark bg-green-bg text-xs font-semibold text-primary">
+            <Leaf size={12} />
+            486kg saved
+          </Badge>
         </div>
-        <Badge variant="secondary" className="gap-1 text-xs">
-          🌿 486kg CO2 saved
-        </Badge>
       </div>
 
-      {/* Material Requests */}
-      <div className="mb-8">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Material Requests</h2>
-            <p className="text-sm text-muted-foreground">
-              Post what you need — sellers in your area will reach out.
-            </p>
-          </div>
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">+ New Request</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Request Materials</DialogTitle>
-                <DialogDescription>
-                  Post what you need and sellers in your area will reach out with
-                  offers.
-                </DialogDescription>
-              </DialogHeader>
-              <CreateRequestForm onClose={() => setCreateOpen(false)} />
-            </DialogContent>
-          </Dialog>
-        </div>
+      <div className="space-y-7 px-5 pb-8">
+        {/* Search */}
+        <button
+          onClick={() => router.push("/browse/all")}
+          className="flex w-full items-center gap-3 rounded-full border border-border bg-card px-4 py-3 text-left transition-colors active:bg-muted"
+        >
+          <Search size={18} className="text-muted-foreground" />
+          <span className="flex-1 text-sm text-muted-foreground">
+            Search surplus materials...
+          </span>
+        </button>
 
-        {requests === undefined ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader className="pb-2">
-                  <div className="h-5 w-16 rounded bg-muted" />
-                  <div className="mt-2 h-4 w-3/4 rounded bg-muted" />
-                </CardHeader>
-                <CardContent>
+        {/* Categories */}
+        <section>
+          <h2 className="mb-3 text-base font-bold tracking-tight">
+            What are you looking for?
+          </h2>
+          <div className="grid grid-cols-4 gap-2.5">
+            {CATEGORIES.map((cat, i) => (
+              <button
+                key={cat.id}
+                onClick={() => router.push(`/browse/${cat.id}`)}
+                className={`animate-fade-up stagger-${(i % 6) + 1} flex flex-col items-center gap-1.5 rounded-2xl border border-border bg-card p-3 transition-all active:scale-95`}
+                aria-label={`Browse ${cat.label}`}
+              >
+                <span className="text-2xl">{cat.icon}</span>
+                <span className="text-center text-[11px] font-semibold leading-tight text-muted-foreground">
+                  {cat.label}
+                </span>
+                {cat.count > 0 && (
+                  <span className="rounded-full bg-green-bg px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                    {cat.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Recent Listings */}
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock size={16} className="text-primary" />
+              <h2 className="text-base font-bold tracking-tight">Recently Added</h2>
+            </div>
+            <button
+              onClick={() => router.push("/browse/all")}
+              className="flex items-center gap-1 text-xs font-semibold text-primary"
+            >
+              See all
+              <ChevronRight size={14} />
+            </button>
+          </div>
+
+          <div className="space-y-2.5">
+            {listings === undefined ? (
+              // Skeleton
+              Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex animate-pulse items-center gap-3.5 rounded-2xl border border-border bg-card p-3"
+                >
+                  <div className="h-16 w-16 flex-shrink-0 rounded-xl bg-muted" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 w-3/4 rounded bg-muted" />
+                    <div className="h-3 w-1/2 rounded bg-muted" />
+                    <div className="h-4 w-1/3 rounded bg-muted" />
+                  </div>
+                </div>
+              ))
+            ) : recentListings && recentListings.length > 0 ? (
+              recentListings.map((listing, i) => {
+                const discount = listing.originalPrice > 0
+                  ? Math.round((1 - listing.price / listing.originalPrice) * 100)
+                  : 0
+                return (
+                  <button
+                    key={listing._id}
+                    onClick={() => router.push(`/listing/${listing._id}`)}
+                    className={`animate-fade-up stagger-${i + 1} flex w-full items-center gap-3.5 rounded-2xl border border-border bg-card p-3 text-left transition-all active:scale-[0.98]`}
+                  >
+                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-muted">
+                      {listing.image && (
+                        <img
+                          src={listing.image}
+                          alt={listing.title}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold">
+                        {listing.title}
+                      </div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">
+                        {listing.location} / {listing.quantity}
+                      </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="text-base font-extrabold">${listing.price}</span>
+                        {listing.originalPrice > listing.price && (
+                          <span className="text-xs text-muted-foreground line-through">
+                            ${listing.originalPrice}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      {discount > 0 && (
+                        <Badge variant="secondary" className="bg-green-bg text-[10px] text-primary">
+                          -{discount}%
+                        </Badge>
+                      )}
+                      <div className="flex items-center gap-1 text-[10px] text-primary">
+                        <Leaf size={10} />
+                        {listing.carbonSaved}kg
+                      </div>
+                    </div>
+                  </button>
+                )
+              })
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
+                <p className="text-sm font-medium text-muted-foreground">No listings yet</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Be the first to post surplus materials
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Material Requests */}
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Megaphone size={16} className="text-warm" />
+              <h2 className="text-base font-bold tracking-tight">Requests</h2>
+            </div>
+            <button
+              onClick={() => router.push("/request")}
+              className="flex items-center gap-1 text-xs font-semibold text-primary"
+            >
+              Post request
+              <ChevronRight size={14} />
+            </button>
+          </div>
+
+          <div className="hide-scrollbar -mx-5 flex gap-2.5 overflow-x-auto px-5 pb-1">
+            {requests === undefined ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="min-w-[200px] animate-pulse rounded-2xl border border-border bg-card p-3.5"
+                >
+                  <div className="mb-2 h-4 w-16 rounded bg-muted" />
+                  <div className="mb-1.5 h-3.5 w-3/4 rounded bg-muted" />
                   <div className="h-3 w-1/2 rounded bg-muted" />
-                </CardContent>
-              </Card>
-            ))}
+                </div>
+              ))
+            ) : requests.length > 0 ? (
+              requests.map((req, i) => (
+                <div
+                  key={req._id}
+                  className={`animate-fade-up stagger-${i + 1} min-w-[200px] rounded-2xl border border-border bg-card p-3.5`}
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <Badge
+                      variant={req.urgency === "Urgent" ? "destructive" : "secondary"}
+                      className="text-[10px]"
+                    >
+                      {req.urgency}
+                    </Badge>
+                  </div>
+                  <div className="mb-1 text-[13px] font-semibold leading-snug">
+                    {req.title}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Budget: {req.budget || "Flexible"}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-muted-foreground">
+                    by {req.requester}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="min-w-[200px] rounded-2xl border border-dashed border-border bg-card p-6 text-center">
+                <p className="text-xs font-medium text-muted-foreground">No requests yet</p>
+              </div>
+            )}
           </div>
-        ) : requests.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <span className="mb-2 text-4xl">📋</span>
-              <p className="font-medium">No requests yet</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Be the first to post a material request.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-            {requests.map((request) => (
-              <RequestCard key={request._id} request={request} />
-            ))}
+        </section>
+
+        {/* AI Scanner promo */}
+        <button
+          onClick={() => router.push("/scan")}
+          className="animate-fade-up flex w-full items-center gap-3.5 rounded-2xl border border-green-bg-dark bg-gradient-to-br from-green-bg to-green-bg-dark p-4 text-left transition-all active:scale-[0.98]"
+        >
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary">
+            <Sparkles size={20} className="text-primary-foreground" />
           </div>
-        )}
+          <div className="flex-1">
+            <div className="text-sm font-bold text-green-dark">
+              AI Material Scanner
+            </div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              Point your camera to instantly identify and list materials
+            </div>
+          </div>
+          <ChevronRight size={18} className="text-primary" />
+        </button>
       </div>
-    </div>
+    </>
   )
 }
