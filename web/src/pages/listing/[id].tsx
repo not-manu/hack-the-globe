@@ -207,7 +207,12 @@ export default function ListingDetail() {
                 </div>
               </div>
             </div>
-            <Button variant="outline" size="sm" className="gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => router.push(`/chat/${listing._id}`)}
+            >
               <MessageCircle size={14} />
               Chat
             </Button>
@@ -231,7 +236,11 @@ export default function ListingDetail() {
             <CreditCard size={16} />
             Buy Now - ${listing.price}
           </Button>
-          <Button variant="outline" className="flex-1 gap-2 py-6">
+          <Button
+            variant="outline"
+            className="flex-1 gap-2 py-6"
+            onClick={() => router.push(`/chat/${listing._id}`)}
+          >
             <MessageCircle size={16} />
             Offer
           </Button>

@@ -35,4 +35,10 @@ export default defineSchema({
     urgency: v.string(),
     requester: v.string(),
   }),
+
+  messages: defineTable({
+    listingId: v.id("listings"),
+    sender: v.string(),
+    body: v.string(),
+  }).index("by_listingId", ["listingId"]),
 });

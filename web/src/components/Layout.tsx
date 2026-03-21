@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { path: "/profile", icon: User, label: "Profile" },
 ]
 
-const HIDE_NAV_PATHS = ["/listing/", "/scan", "/request"]
+const HIDE_NAV_PATHS = ["/listing/", "/scan", "/request", "/chat/"]
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter()

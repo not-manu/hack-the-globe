@@ -9,6 +9,7 @@
  */
 
 import type * as listings from "../listings.js";
+import type * as messages from "../messages.js";
 import type * as requests from "../requests.js";
 import type * as seed from "../seed.js";
 
@@ -20,6 +21,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   listings: typeof listings;
+  messages: typeof messages;
   requests: typeof requests;
   seed: typeof seed;
 }>;
