@@ -21,8 +21,9 @@ const materialSchema = z.object({
       'pipe',
       'electrical',
       'fixtures',
+      'other',
     ])
-    .describe('Best matching category'),
+    .describe('Best matching category. Use "other" for non-construction items like furniture, appliances, tools, decor, etc.'),
   condition: z
     .enum(['Excellent', 'Good', 'Fair', 'Poor'])
     .describe('Assessed condition of the material'),
@@ -86,7 +87,7 @@ export default async function handler(
           content: [
             {
               type: 'text',
-              text: 'You are a construction material identification expert for a surplus materials marketplace called ScrapYard. Analyze this image and identify ALL distinct construction materials visible. For each material, provide the specific name, category, condition assessment, confidence level, suggested resale price, a brief marketplace description, and estimated CO2 savings from reusing instead of manufacturing new. Return every distinct material you can identify — there may be multiple materials in one photo. Be specific and practical.',
+              text: 'You are an identification expert for a surplus materials marketplace called ScrapYard. Analyze this image and identify ALL distinct items visible — these can be construction materials, furniture, appliances, tools, decor, or any reusable item. For each item, provide the specific name, best-matching category (use "other" for non-construction items), condition assessment, confidence level, suggested resale price, a brief marketplace description, and estimated CO2 savings from reusing instead of buying new. Return every distinct item you can identify — there may be multiple in one photo. Be specific and practical.',
             },
             {
               type: 'image',

@@ -33,6 +33,7 @@ const CATEGORIES = [
   { id: 'pipe', label: '\u{1F527} Piping' },
   { id: 'electrical', label: '\u{1F4A1} Electrical' },
   { id: 'fixtures', label: '\u{1F6BF} Fixtures' },
+  { id: 'other', label: '\u{1F4E6} Other' },
 ]
 
 type ScannedItem = {

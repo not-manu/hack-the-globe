@@ -24,6 +24,7 @@ const CATEGORIES: Record<string, { label: string; icon: string }> = {
   pipe: { label: 'Piping', icon: '\u{1F527}' },
   electrical: { label: 'Electrical', icon: '\u{1F4A1}' },
   fixtures: { label: 'Fixtures', icon: '\u{1F6BF}' },
+  other: { label: 'Other', icon: '\u{1F4E6}' },
 }
 
 export default function ListingDetail() {

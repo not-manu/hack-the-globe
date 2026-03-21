@@ -15,6 +15,7 @@ const CATEGORIES = [
   { id: "pipe", label: "Piping", icon: "\u{1F527}" },
   { id: "electrical", label: "Electrical", icon: "\u{1F4A1}" },
   { id: "fixtures", label: "Fixtures", icon: "\u{1F6BF}" },
+  { id: "other", label: "Other", icon: "\u{1F3F7}\u{FE0F}" },
 ]
 
 export default function Browse() {

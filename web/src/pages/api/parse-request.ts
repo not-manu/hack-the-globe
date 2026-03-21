@@ -23,8 +23,9 @@ const requestSchema = z.object({
       'pipe',
       'electrical',
       'fixtures',
+      'other',
     ])
-    .describe('Best matching material category'),
+    .describe('Best matching category. Use "other" for non-construction items like furniture, appliances, tools, decor, etc.'),
   budget: z
     .string()
     .describe(
@@ -64,7 +65,7 @@ export default async function handler(
         {
           role: 'system',
           content:
-            'You are a helpful assistant for ScrapYard, a construction surplus materials marketplace. The user is describing what construction materials they need. Extract the structured request data from their message. Be practical and specific with the title. If they mention a budget, format it as a range like "$100-200". If they mention urgency or a deadline, set urgency accordingly. Always write a friendly, brief reply confirming what you understood.',
+            'You are a helpful assistant for ScrapYard, a surplus materials marketplace. The user is describing what items they need — these can be construction materials, furniture, appliances, tools, or any reusable item. Extract the structured request data from their message. Use "other" as the category for non-construction items. Be practical and specific with the title. If they mention a budget, format it as a range like "$100-200". If they mention urgency or a deadline, set urgency accordingly. Always write a friendly, brief reply confirming what you understood.',
         },
         {
           role: 'user',
