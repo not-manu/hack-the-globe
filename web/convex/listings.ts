@@ -11,7 +11,7 @@ export const generateUploadUrl = mutation({
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const listings = await ctx.db.query("listings").collect();
+    const listings = await ctx.db.query("listings").order("desc").collect();
     return Promise.all(
       listings.map(async (listing) => ({
         ...listing,
