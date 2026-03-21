@@ -1,0 +1,283 @@
+/* App shell */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  position: relative;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+/* Main scrollable area */
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 88px;
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  background: linear-gradient(to top, var(--bg-primary) 60%, transparent);
+  padding: 6px 12px calc(8px + var(--safe-bottom));
+  z-index: 100;
+}
+
+.bottom-nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 4px 6px;
+  box-shadow: var(--shadow-lg);
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  transition: all 0.2s;
+  position: relative;
+}
+
+.nav-item span {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
+
+.nav-item svg {
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
+
+.nav-item.active {
+  background: var(--green-bg);
+}
+
+.nav-item.active svg {
+  color: var(--green);
+}
+
+.nav-item.active span {
+  color: var(--green);
+}
+
+/* Post button (center nav) */
+.nav-post-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-green);
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin: -8px 0;
+}
+
+.nav-post-btn:active {
+  transform: scale(0.92);
+}
+
+.nav-post-btn svg {
+  color: white;
+}
+
+/* Page header */
+.page-header {
+  padding: 16px 20px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: var(--bg-primary);
+  z-index: 50;
+}
+
+.page-header h1 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.page-header .accent {
+  color: var(--green);
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.badge-green {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.badge-warm {
+  background: #fffbeb;
+  color: var(--warm);
+}
+
+.badge-gray {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+}
+
+.badge-verified {
+  background: var(--green-bg);
+  color: var(--green);
+  border: 1px solid var(--green-bg-dark);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.btn-primary {
+  background: var(--green);
+  color: white;
+  box-shadow: var(--shadow-green);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+  background: var(--green-dark);
+}
+
+.btn-secondary {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1.5px solid var(--border);
+}
+
+.btn-secondary:active {
+  background: var(--bg-elevated);
+}
+
+.btn-outline-green {
+  background: var(--green-bg);
+  color: var(--green);
+  border: 1.5px solid var(--green-bg-dark);
+}
+
+.btn-outline-green:active {
+  background: var(--green-bg-dark);
+}
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.card:active {
+  transform: scale(0.98);
+}
+
+/* Section titles */
+.section-label {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  padding: 0 20px;
+  margin-bottom: 12px;
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 20px;
+}
+
+/* Savings */
+.savings {
+  font-weight: 700;
+  color: var(--green);
+}
+
+/* Price */
+.price {
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--text-primary);
+}
+
+.price-original {
+  font-size: 14px;
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+/* Form group */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Star rating */
+.stars {
+  display: flex;
+  gap: 2px;
+}
+
+/* Verification badge inline */
+.verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--green);
+}

@@ -1,0 +1,9 @@
+**Judging Rubric: Business Strategy**  
+*Hack The Globe 2026*
+
+| Criteria | 4/15 | 8/15 | 12/15 | 15/15 |
+| ----- | ----- | ----- | ----- | ----- |
+| **Problem & Solution Scope** (15 points) | Problem identified, but vague or overly broad. Minimal consideration of target needs or context. | Defines a scoped-down problem area with partial plan; limited depth in addressing target needs. | Well-scoped, realistic plan that defines both the problem and the solution approach, integrating key external factors (socioeconomic, environmental, political, and cultural) but lacks depth. | Comprehensive and well-defined scope that clearly outlines both the problem and the solution approach, with clear implementation steps and deep integration of all relevant factors. |
+| **Business Model** (15 points) | Business model is not defined. Little clarity on costs, partnerships, or risks. Feasibility unclear. | Defined business model with some financial and operational planning, but lacks detail or risk strategies.  | Strong business model showing scalability and partnerships; identifies potential risks but limited explanation.  | Robust, scalable model with clear financial planning, partnerships, and detailed risk mitigation strategies.  |
+| **Impact & Relevance** (15 points) | Identifies problem but lacks evidence or clear significance. Limited clarity on who is affected.  | Uses some research to define the impact, but weak validation of how the solution addresses it.  | Strong research foundation explaining why the issue matters and who benefits; demonstrates potential for long-term benefits, but lacks completeness in validation.  | Comprehensive research with clear data (case studies, user insights, market analysis), considering both direct and indirect impacts, showing the solution’s relevance, and measurable real-world outcomes.  |
+

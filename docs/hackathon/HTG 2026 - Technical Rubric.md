@@ -1,0 +1,13 @@
+**Judging Rubric: Technical**  
+*Hack The Globe 2026*
+
+| Criteria | 3/10 | 5/10 | 7/10 | 10/10 |
+| ----- | ----- | ----- | ----- | ----- |
+| **Technical Proficiency** (10 points) | Idea-stage only \- includes sketches, diagrams, or pseudo code, but no working prototype. Technology choice (software, hardware, or both) may not fit the problem. | Partial prototype or simple demo showing limited functionality. Team shows some technical understanding but misses key processes or makes design/logic errors. | Functional prototype that demonstrates core features and working flow. Team can explain their design, code, or circuitry. May lack testing, optimization, or error handling. | Fully developed prototype showing strong technical skill. All major features work smoothly. Software and/or hardware are well-integrated, efficient, and validated through testing (e.g., simulations, scenario runs, or measured results). Ready for real-world prototyping.  |
+| **Scalability** (10 points) | No clear plan for how the solution could be built, launched, or used in the real world. | Some steps for implementation are mentioned, but the plan is incomplete or unrealistic. Limited thought given to cost, resources required, or how the system would scale over time. | Clear plan describing how the solution could be developed and deployed, with some ideas for scaling (e.g., manufacturing, optimization, or user expansion). | Detailed, realistic roadmap for building, launching, and scaling the solution. Covers logistics, funding, partnerships, and technical or production scaling to reach larger markets or higher user demand.  |
+| **Innovation** (10 points) | Does not explain how the idea differs from existing solutions. | Shows small improvements or minor new features compared to existing solutions. | Demonstrates originality in design or function, with some comparison to what’s already available. | Clearly stands out from existing solutions through novel technology, design, or approach. Provides evidence or reasoning for why it’s more effective or impactful.  |
+| **Technology– Problem Fit**  (10 points)  | **0** |  | **10** |  |
+|  | Weak or no clear connection |  | Strong, logical fit that effectively addresses the identified problem or theme.  |  |
+| **Tech Demo**  (5 Points) | **1/5** | **2/5** | **3/5** | **5/5** |
+|  | No demo or unclear explanation of how it works. | Some demonstration, but unclear or incomplete. No working model or test shown.  | Working demo or simulation that explains the main features and functions, but lacks detail. | High-quality and detailed demo that shows the solution in action. Explains technical process, testing, and unique features effectively. Demonstrates robust and well-developed functionality.  |
+
