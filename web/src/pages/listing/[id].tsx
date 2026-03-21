@@ -1,5 +1,5 @@
 import { useRouter } from "next/router"
-import { useQuery } from "convex/react"
+import { useQuery, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import type { Id } from "../../../convex/_generated/dataModel"
 import {
@@ -13,6 +13,7 @@ import {
   MessageCircle,
   BadgeCheck,
   CreditCard,
+  Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -26,6 +27,9 @@ export default function ListingDetail() {
     id ? { id: id as Id<"listings"> } : "skip"
   )
   const [saved, setSaved] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const removeListing = useMutation(api.listings.remove)
 
   if (listing === undefined) {
     return (
@@ -97,6 +101,13 @@ export default function ListingDetail() {
               className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-foreground backdrop-blur-md"
             >
               <Share2 size={16} />
+            </button>
+            <button
+              aria-label="Delete listing"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-destructive backdrop-blur-md"
+            >
+              <Trash2 size={16} />
             </button>
           </div>
         </div>
@@ -221,6 +232,44 @@ export default function ListingDetail() {
           </Button>
         </div>
       </div>
+
+      {/* Delete confirmation overlay */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 mb-8 w-full max-w-[400px] animate-fade-up rounded-2xl bg-card p-5">
+            <div className="mb-1 text-center text-base font-bold">
+              Delete listing?
+            </div>
+            <p className="mb-5 text-center text-sm text-muted-foreground">
+              This will permanently remove &ldquo;{listing.title}&rdquo;. This
+              action cannot be undone.
+            </p>
+            <div className="flex gap-2.5">
+              <Button
+                variant="outline"
+                className="flex-1 py-5"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1 gap-2 py-5 font-bold"
+                disabled={deleting}
+                onClick={async () => {
+                  setDeleting(true)
+                  await removeListing({ id: listing._id })
+                  router.replace("/")
+                }}
+              >
+                <Trash2 size={14} />
+                {deleting ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

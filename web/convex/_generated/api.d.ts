@@ -10,6 +10,7 @@
 
 import type * as listings from "../listings.js";
 import type * as requests from "../requests.js";
+import type * as seed from "../seed.js";
 
 import type {
   ApiFromModules,
@@ -20,6 +21,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   listings: typeof listings;
   requests: typeof requests;
+  seed: typeof seed;
 }>;
 
 /**
