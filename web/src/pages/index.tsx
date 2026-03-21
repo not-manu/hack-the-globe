@@ -162,19 +162,21 @@ export default function Home() {
           </section>
         )}
 
-        {/* AI Scanner */}
+        {/* AI Scanner CTA */}
         <button
-          onClick={() => router.push("/scan")}
-          className="flex w-full items-center gap-3 rounded-xl bg-green-bg p-4 text-left transition-all active:scale-[0.98]"
+          onClick={() => router.push("/post?scan=1")}
+          className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-green-bg p-4 text-left ring-1 ring-primary/15 transition-all active:scale-[0.98]"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-            <Sparkles size={18} className="text-primary-foreground" />
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-green-light shadow-md shadow-primary/20">
+              <Sparkles size={22} className="text-white" />
+            </div>
+            <div className="flex-1">
+              <div className="text-sm font-bold text-foreground">AI Material Scanner</div>
+              <div className="text-xs text-muted-foreground">Snap, identify &amp; list in seconds</div>
+            </div>
+            <ChevronRight size={16} className="text-primary transition-transform group-active:translate-x-0.5" />
           </div>
-          <div className="flex-1">
-            <div className="text-sm font-semibold text-green-dark">AI Scanner</div>
-            <div className="text-xs text-muted-foreground">Identify materials with your camera</div>
-          </div>
-          <ChevronRight size={16} className="text-primary" />
         </button>
       </div>
     </>
