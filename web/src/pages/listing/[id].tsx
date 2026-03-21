@@ -216,13 +216,15 @@ export default function ListingDetail() {
         </div>
 
         {/* Action */}
-        <Button
-          className="w-full gap-2 py-5 text-base font-bold"
-          onClick={() => router.push(`/chat/${listing._id}`)}
-        >
-          <MessageCircle size={16} />
-          Contact Seller · ${listing.price}
-        </Button>
+        {!isOwner && (
+          <Button
+            className="w-full gap-2 py-5 text-base font-bold"
+            onClick={() => router.push(`/chat/${listing._id}?intro=1`)}
+          >
+            <MessageCircle size={16} />
+            Contact Seller · ${listing.price}
+          </Button>
+        )}
       </div>
 
       {/* Delete confirmation */}

@@ -85,7 +85,7 @@ export default function PostMaterial() {
   const [items, setItems] = useState<ScannedItem[]>([])
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [posting, setPosting] = useState(false)
-  const [posted, setPosted] = useState(false)
+  const [postedId, setPostedId] = useState<string | null>(null)
   const [location, setLocation] = useState('')
 
   // Camera state
@@ -293,7 +293,7 @@ export default function PostMaterial() {
         ? items[0].editTitle
         : `${items.length} surplus materials`
 
-      await createListing({
+      const newId = await createListing({
         title: listingTitle,
         category: primaryCategory,
         price: totalPrice,
@@ -308,7 +308,7 @@ export default function PostMaterial() {
         items: listingItems,
       })
 
-      setPosted(true)
+      setPostedId(newId as unknown as string)
     } catch (err) {
       console.error('Failed to post listing:', err)
       setScanError('Failed to post listing. Please try again.')
@@ -318,7 +318,7 @@ export default function PostMaterial() {
   }
 
   // --- Success screen ---
-  if (posted) {
+  if (postedId) {
     return (
       <div className="flex min-h-[80dvh] flex-col items-center justify-center gap-6 px-5">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
@@ -349,9 +349,17 @@ export default function PostMaterial() {
             </div>
           </div>
         </div>
-        <Button onClick={() => router.push('/')} className="w-full max-w-[240px]">
-          Back to Home
-        </Button>
+        <div className="flex w-full max-w-[280px] gap-2">
+          <Button
+            className="flex-1"
+            onClick={() => router.push(`/listing/${postedId}`)}
+          >
+            View Listing
+          </Button>
+          <Button variant="outline" className="flex-1" onClick={() => router.push('/')}>
+            Home
+          </Button>
+        </div>
       </div>
     )
   }

@@ -54,6 +54,24 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages?.length])
 
+  // Auto-send intro message when arriving from listing detail
+  const introSent = useRef(false)
+  useEffect(() => {
+    if (
+      router.query.intro === "1" &&
+      !introSent.current &&
+      listing &&
+      listingId &&
+      username &&
+      messages &&
+      messages.length === 0
+    ) {
+      introSent.current = true
+      const intro = `Hi, I'm interested in ${listing.title}. Is $${listing.price} still available?`
+      sendMessage({ listingId, sender: username, body: intro })
+    }
+  }, [router.query.intro, listing, listingId, username, messages, sendMessage])
+
   async function handleSend() {
     const body = text.trim()
     if (!body || !listingId || !username) return

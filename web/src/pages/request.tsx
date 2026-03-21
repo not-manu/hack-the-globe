@@ -9,8 +9,8 @@ import {
   Check,
   Pencil,
   Trash2,
-  Leaf,
   Users,
+  ChevronRight,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -206,9 +206,9 @@ export default function RequestPage() {
               return (
                 <div
                   key={req._id}
-                  className="rounded-xl border border-border bg-card p-3.5"
+                  className="overflow-hidden rounded-xl border border-border bg-card"
                 >
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start justify-between gap-2 p-3.5">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-base">{cat?.icon ?? '📦'}</span>
@@ -231,15 +231,6 @@ export default function RequestPage() {
                         >
                           {req.urgency}
                         </Badge>
-                        {matchCount > 0 && (
-                          <>
-                            <span className="text-border">·</span>
-                            <span className="flex items-center gap-0.5 font-medium text-primary">
-                              <Leaf size={9} />
-                              {matchCount} available
-                            </span>
-                          </>
-                        )}
                       </div>
                     </div>
                     <button
@@ -250,6 +241,16 @@ export default function RequestPage() {
                       <Trash2 size={13} />
                     </button>
                   </div>
+                  <button
+                    onClick={() => router.push(`/browse/${req.category}`)}
+                    className="flex w-full items-center justify-center gap-1.5 border-t border-border py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-muted"
+                  >
+                    {matchCount > 0
+                      ? `Browse ${matchCount} available listing${matchCount !== 1 ? 's' : ''}`
+                      : `Browse ${cat?.label ?? req.category}`
+                    }
+                    <ChevronRight size={12} />
+                  </button>
                 </div>
               )
             })}
@@ -358,9 +359,23 @@ export default function RequestPage() {
                         </div>
                       )}
                       {msg.posted && (
-                        <div className="flex items-center justify-center gap-1.5 border-t border-primary/10 bg-primary/5 py-2 text-xs font-medium text-primary">
-                          <Check size={12} />
-                          Posted
+                        <div className="flex border-t border-border">
+                          <div className="flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-medium text-primary">
+                            <Check size={12} />
+                            Posted
+                          </div>
+                          {getMatchCount(msg.data.category) > 0 && (
+                            <>
+                              <div className="w-px bg-border" />
+                              <button
+                                onClick={() => router.push(`/browse/${msg.data.category}`)}
+                                className="flex flex-1 items-center justify-center gap-1 py-2 text-xs font-semibold text-primary transition-colors hover:bg-muted"
+                              >
+                                Browse {getMatchCount(msg.data.category)} available
+                                <ChevronRight size={12} />
+                              </button>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
