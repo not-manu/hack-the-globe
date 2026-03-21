@@ -18,9 +18,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useState } from "react"
+import { useAuth } from "@/components/AuthContext"
 
 export default function ListingDetail() {
   const router = useRouter()
+  const { username } = useAuth()
   const { id } = router.query
   const listing = useQuery(
     api.listings.getById,
@@ -30,6 +32,7 @@ export default function ListingDetail() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const removeListing = useMutation(api.listings.remove)
+  const isOwner = listing && username && listing.seller === username
 
   if (listing === undefined) {
     return (
@@ -102,13 +105,15 @@ export default function ListingDetail() {
             >
               <Share2 size={16} />
             </button>
-            <button
-              aria-label="Delete listing"
-              onClick={() => setShowDeleteConfirm(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-destructive backdrop-blur-md"
-            >
-              <Trash2 size={16} />
-            </button>
+            {isOwner && (
+              <button
+                aria-label="Delete listing"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-destructive backdrop-blur-md"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
           </div>
         </div>
 

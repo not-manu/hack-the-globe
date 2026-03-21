@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useAuth } from "@/components/AuthContext"
 
 const CATEGORIES = [
   { id: "lumber", label: "\u{1FAB5} Lumber" },
@@ -46,6 +47,7 @@ const SCAN_PHRASES = [
 
 export default function PostMaterial() {
   const router = useRouter()
+  const { username } = useAuth()
   const generateUploadUrl = useMutation(api.listings.generateUploadUrl)
   const createListing = useMutation(api.listings.create)
 
@@ -218,6 +220,7 @@ export default function PostMaterial() {
         location: location || "Toronto, ON",
         carbonSaved: scanResult?.carbonSaved ?? 0,
         images: storageIds,
+        seller: username ?? "Anonymous",
       })
 
       router.push("/")

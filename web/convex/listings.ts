@@ -68,6 +68,7 @@ export const create = mutation({
     location: v.string(),
     carbonSaved: v.number(),
     images: v.optional(v.array(v.id("_storage"))),
+    seller: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("listings", {
@@ -80,10 +81,9 @@ export const create = mutation({
       location: args.location,
       carbonSaved: args.carbonSaved,
       images: args.images ?? [],
-      // Defaults for fields the post form doesn't collect
       quantity: "1",
       unit: "piece",
-      seller: "You",
+      seller: args.seller ?? "Anonymous",
       sellerRating: 5.0,
       sellerVerified: false,
       sellerTransactions: 0,

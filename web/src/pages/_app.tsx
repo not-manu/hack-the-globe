@@ -3,6 +3,8 @@ import { useState, useEffect } from "react"
 import type { AppProps } from "next/app"
 import { ConvexProvider, ConvexReactClient } from "convex/react"
 import Layout from "@/components/Layout"
+import { AuthProvider, useAuth } from "@/components/AuthContext"
+import NamePrompt from "@/components/NamePrompt"
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
@@ -24,7 +26,6 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
         transition: "opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
-      {/* Logo */}
       <img
         src="/logo-transparent-cropped.png"
         alt="ScrapYard"
@@ -40,8 +41,6 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
           transition: "all 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
         }}
       />
-
-      {/* Tagline */}
       <p
         className="mt-4 text-sm font-medium text-muted-foreground"
         style={{
@@ -60,17 +59,28 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
   )
 }
 
-export default function App({ Component, pageProps }: AppProps) {
+function AppShell({ Component, pageProps }: AppProps) {
+  const { username } = useAuth()
   const [showSplash, setShowSplash] = useState(true)
 
+  // Show splash, then name prompt if no username, then app
+  return (
+    <div className="h-full max-h-dvh overflow-hidden">
+      {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
+      {!showSplash && !username && <NamePrompt />}
+      <Layout>
+        <Component {...pageProps} />
+      </Layout>
+    </div>
+  )
+}
+
+export default function App(props: AppProps) {
   return (
     <ConvexProvider client={convex}>
-      <div className="h-full max-h-dvh overflow-hidden">
-        {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
-        <Layout>
-          <Component {...pageProps} />
-        </Layout>
-      </div>
+      <AuthProvider>
+        <AppShell {...props} />
+      </AuthProvider>
     </ConvexProvider>
   )
 }

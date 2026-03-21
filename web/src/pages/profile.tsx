@@ -13,17 +13,20 @@ import {
   HelpCircle,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { useAuth } from "@/components/AuthContext"
 
 export default function Profile() {
   const router = useRouter()
+  const { username, logout } = useAuth()
   const listings = useQuery(api.listings.list)
   const requests = useQuery(api.requests.list)
+  const myListings = listings?.filter((l) => l.seller === username)
 
   const menuItems = [
     {
       icon: Package,
       label: "My Listings",
-      value: `${listings?.length ?? 0}`,
+      value: `${myListings?.length ?? 0}`,
       onClick: () => router.push("/browse/all"),
     },
     {
@@ -65,10 +68,10 @@ export default function Profile() {
         {/* Avatar card */}
         <div className="animate-fade-up flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">
-            S
+            {username?.charAt(0).toUpperCase() ?? "?"}
           </div>
           <div className="flex-1">
-            <div className="text-base font-bold">ScrapYard User</div>
+            <div className="text-base font-bold">{username ?? "User"}</div>
             <div className="mt-0.5 text-xs text-muted-foreground">
               Member since 2026
             </div>
@@ -127,7 +130,7 @@ export default function Profile() {
         {/* Sign out */}
         <button
           className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card p-3.5 text-sm font-semibold text-destructive transition-all active:scale-[0.98]"
-          onClick={() => {}}
+          onClick={logout}
         >
           <LogOut size={16} />
           Sign Out
