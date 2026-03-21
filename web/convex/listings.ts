@@ -69,6 +69,15 @@ export const create = mutation({
     carbonSaved: v.number(),
     images: v.optional(v.array(v.id("_storage"))),
     seller: v.optional(v.string()),
+    items: v.optional(v.array(v.object({
+      title: v.string(),
+      category: v.string(),
+      price: v.number(),
+      originalPrice: v.number(),
+      condition: v.string(),
+      description: v.string(),
+      carbonSaved: v.number(),
+    }))),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("listings", {
@@ -81,8 +90,9 @@ export const create = mutation({
       location: args.location,
       carbonSaved: args.carbonSaved,
       images: args.images ?? [],
-      quantity: "1",
-      unit: "piece",
+      items: args.items,
+      quantity: args.items ? String(args.items.length) : "1",
+      unit: args.items ? "items" : "piece",
       seller: args.seller ?? "Anonymous",
       sellerRating: 5.0,
       sellerVerified: false,

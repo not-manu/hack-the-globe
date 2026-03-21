@@ -144,9 +144,16 @@ export default function Browse() {
                         -{discount}%
                       </div>
                     )}
-                    <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-primary backdrop-blur-sm">
-                      <Leaf size={10} />
-                      {listing.carbonSaved}kg
+                    <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+                      <div className="flex items-center gap-1 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-primary backdrop-blur-sm">
+                        <Leaf size={10} />
+                        {listing.carbonSaved}kg
+                      </div>
+                      {listing.items && listing.items.length > 1 && (
+                        <div className="rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-foreground backdrop-blur-sm">
+                          {listing.items.length} items
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="p-2.5">

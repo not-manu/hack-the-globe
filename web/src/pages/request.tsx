@@ -1,154 +1,176 @@
-import { useState } from "react"
-import { useRouter } from "next/router"
-import { useQuery, useMutation } from "convex/react"
-import { api } from "../../convex/_generated/api"
-import type { Id } from "../../convex/_generated/dataModel"
-import { ArrowLeft, Plus, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/router'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../convex/_generated/api'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog"
+  ArrowLeft,
+  Send,
+  Loader2,
+  Check,
+  Pencil,
+  Trash2,
+  Leaf,
+  Users,
+} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { useAuth } from '@/components/AuthContext'
 
-const CATEGORIES = [
-  { id: "lumber", label: "\u{1FAB5} Lumber" },
-  { id: "steel", label: "\u{1F529} Steel" },
-  { id: "concrete", label: "\u{1F9F1} Concrete" },
-  { id: "brick", label: "\u{1F3D7}\u{FE0F} Brick" },
-  { id: "glass", label: "\u{1FA9F} Glass" },
-  { id: "pipe", label: "\u{1F527} Piping" },
-  { id: "electrical", label: "\u{1F4A1} Electrical" },
-  { id: "fixtures", label: "\u{1F6BF} Fixtures" },
-]
+const CATEGORIES: Record<string, { label: string; icon: string }> = {
+  lumber: { label: 'Lumber', icon: '\u{1FAB5}' },
+  steel: { label: 'Steel', icon: '\u{1F529}' },
+  concrete: { label: 'Concrete', icon: '\u{1F9F1}' },
+  brick: { label: 'Brick', icon: '\u{1F3D7}\u{FE0F}' },
+  glass: { label: 'Glass', icon: '\u{1FA9F}' },
+  pipe: { label: 'Piping', icon: '\u{1F527}' },
+  electrical: { label: 'Electrical', icon: '\u{1F4A1}' },
+  fixtures: { label: 'Fixtures', icon: '\u{1F6BF}' },
+}
 
-const URGENCIES = ["Urgent", "This week", "Flexible"]
+type ParsedRequest = {
+  title: string
+  category: string
+  budget: string
+  urgency: string
+  reply: string
+}
+
+type ChatMessage =
+  | { role: 'user'; text: string }
+  | { role: 'assistant'; text: string }
+  | { role: 'card'; data: ParsedRequest; posted: boolean; posting: boolean }
 
 export default function RequestPage() {
   const router = useRouter()
+  const { username } = useAuth()
   const requests = useQuery(api.requests.list)
+  const listings = useQuery(api.listings.list)
   const createRequest = useMutation(api.requests.create)
   const removeRequest = useMutation(api.requests.remove)
 
-  const [createOpen, setCreateOpen] = useState(false)
-  const [editId, setEditId] = useState<Id<"requests"> | null>(null)
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: 'assistant',
+      text: 'What construction materials do you need? Just describe it naturally — I\'ll handle the rest.',
+    },
+  ])
+  const [input, setInput] = useState('')
+  const [thinking, setThinking] = useState(false)
+  const [showExisting, setShowExisting] = useState(false)
 
-  // Form state (shared for create + edit)
-  const [title, setTitle] = useState("")
-  const [category, setCategory] = useState("")
-  const [budget, setBudget] = useState("")
-  const [urgency, setUrgency] = useState("Flexible")
-  const [requester, setRequester] = useState("")
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const editingRequest = requests?.find((r) => r._id === editId)
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+  }, [messages, thinking])
 
-  const openCreate = () => {
-    setTitle("")
-    setCategory("")
-    setBudget("")
-    setUrgency("Flexible")
-    setRequester("")
-    setCreateOpen(true)
+  // Count listings matching a category
+  const getMatchCount = (category: string) => {
+    if (!listings) return 0
+    return listings.filter((l) => l.category === category).length
   }
 
-  const openEdit = (id: Id<"requests">) => {
-    const req = requests?.find((r) => r._id === id)
-    if (!req) return
-    setTitle(req.title)
-    setCategory(req.category)
-    setBudget(req.budget)
-    setUrgency(req.urgency)
-    setRequester(req.requester)
-    setEditId(id)
+  const handleSend = async () => {
+    const text = input.trim()
+    if (!text || thinking) return
+
+    setInput('')
+    setMessages((prev) => [...prev, { role: 'user', text }])
+    setThinking(true)
+
+    try {
+      const res = await fetch('/api/parse-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to understand request')
+      }
+
+      const data: ParsedRequest = await res.json()
+
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', text: data.reply },
+        { role: 'card', data, posted: false, posting: false },
+      ])
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: 'Sorry, I couldn\'t understand that. Could you describe the materials you need in a bit more detail?',
+        },
+      ])
+    } finally {
+      setThinking(false)
+      setTimeout(() => inputRef.current?.focus(), 100)
+    }
   }
 
-  const handleCreate = async () => {
-    if (!title || !category || !requester) return
-    await createRequest({ title, category, budget, urgency, requester })
-    setCreateOpen(false)
+  const handlePost = async (index: number) => {
+    const msg = messages[index]
+    if (msg.role !== 'card' || msg.posted || msg.posting) return
+
+    // Set posting state
+    setMessages((prev) =>
+      prev.map((m, i) =>
+        i === index && m.role === 'card' ? { ...m, posting: true } : m,
+      ),
+    )
+
+    try {
+      await createRequest({
+        title: msg.data.title,
+        category: msg.data.category,
+        budget: msg.data.budget,
+        urgency: msg.data.urgency,
+        requester: username ?? 'Anonymous',
+      })
+
+      setMessages((prev) =>
+        prev.map((m, i) =>
+          i === index && m.role === 'card'
+            ? { ...m, posted: true, posting: false }
+            : m,
+        ),
+      )
+
+      // Add confirmation
+      const matchCount = getMatchCount(msg.data.category)
+      const matchText =
+        matchCount > 0
+          ? ` There ${matchCount === 1 ? 'is' : 'are'} already ${matchCount} listing${matchCount !== 1 ? 's' : ''} in ${CATEGORIES[msg.data.category]?.label ?? msg.data.category} — you might find a match soon.`
+          : ''
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: `Posted! We'll notify you when matching materials show up nearby.${matchText} Need anything else?`,
+        },
+      ])
+    } catch {
+      setMessages((prev) =>
+        prev.map((m, i) =>
+          i === index && m.role === 'card'
+            ? { ...m, posting: false }
+            : m,
+        ),
+      )
+    }
   }
 
-  const handleUpdate = async () => {
-    if (!editId || !title || !category || !requester) return
-    await removeRequest({ id: editId })
-    await createRequest({ title, category, budget, urgency, requester })
-    setEditId(null)
-  }
-
-  const handleDelete = async () => {
-    if (!editId) return
-    await removeRequest({ id: editId })
-    setEditId(null)
-  }
-
-  const canSubmit = title && category && requester
-
-  const formContent = (
-    <div className="space-y-4">
-      <Input
-        placeholder="What do you need?"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        className="h-10"
-      />
-
-      <div className="flex flex-wrap gap-1.5">
-        {CATEGORIES.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => setCategory(c.id)}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              category === c.id
-                ? "bg-primary text-primary-foreground"
-                : "border border-border bg-card text-muted-foreground"
-            }`}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex gap-2">
-        <Input
-          placeholder="Budget (optional)"
-          value={budget}
-          onChange={(e) => setBudget(e.target.value)}
-          className="h-10 flex-1"
-        />
-        <Input
-          placeholder="Your name"
-          value={requester}
-          onChange={(e) => setRequester(e.target.value)}
-          className="h-10 flex-1"
-        />
-      </div>
-
-      <div className="flex gap-1.5">
-        {URGENCIES.map((u) => (
-          <button
-            key={u}
-            onClick={() => setUrgency(u)}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              urgency === u
-                ? "bg-primary text-primary-foreground"
-                : "border border-border bg-card text-muted-foreground"
-            }`}
-          >
-            {u}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
+  const myRequests = requests?.filter((r) => r.requester === username)
 
   return (
-    <>
+    <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-2">
+      <div className="flex shrink-0 items-center justify-between border-b border-border/50 px-5 pt-4 pb-3">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
@@ -157,84 +179,262 @@ export default function RequestPage() {
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-lg font-bold">Requests</h1>
-        </div>
-        <Button size="sm" className="gap-1" onClick={openCreate}>
-          <Plus size={14} /> New
-        </Button>
-      </div>
-
-      {/* List */}
-      <div className="space-y-2 px-5 pb-8">
-        {requests === undefined ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="animate-pulse rounded-xl border border-border bg-card p-3">
-              <div className="mb-2 h-3 w-16 rounded bg-muted" />
-              <div className="h-3.5 w-3/4 rounded bg-muted" />
-            </div>
-          ))
-        ) : requests.length === 0 ? (
-          <div className="py-20 text-center text-sm text-muted-foreground">
-            No requests yet
+          <div>
+            <h1 className="text-lg font-bold">Find Materials</h1>
+            <p className="text-[11px] text-muted-foreground">
+              Describe what you need
+            </p>
           </div>
-        ) : (
-          requests.map((req) => (
-            <button
-              key={req._id}
-              onClick={() => openEdit(req._id)}
-              className="w-full rounded-xl border border-border bg-card p-3 text-left transition-all active:scale-[0.98]"
-            >
-              <div className="mb-1 text-[11px] font-medium text-warm">
-                {req.urgency}
-              </div>
-              <div className="text-sm font-semibold">{req.title}</div>
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                {req.budget || "Flexible"} &middot; {req.requester}
-              </div>
-            </button>
-          ))
+        </div>
+        {myRequests && myRequests.length > 0 && (
+          <button
+            onClick={() => setShowExisting(!showExisting)}
+            className="text-xs font-medium text-primary"
+          >
+            {showExisting ? 'Chat' : `My requests (${myRequests.length})`}
+          </button>
         )}
       </div>
 
-      {/* Create dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New Request</DialogTitle>
-          </DialogHeader>
-          {formContent}
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button onClick={handleCreate} disabled={!canSubmit}>
-              Post
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Existing requests list */}
+      {showExisting && myRequests && (
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          <div className="space-y-2.5">
+            {myRequests.map((req) => {
+              const cat = CATEGORIES[req.category]
+              const matchCount = getMatchCount(req.category)
+              return (
+                <div
+                  key={req._id}
+                  className="rounded-xl border border-border bg-card p-3.5"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{cat?.icon ?? '📦'}</span>
+                        <span className="truncate text-sm font-semibold">
+                          {req.title}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+                        <span>{req.budget || 'Flexible'}</span>
+                        <span className="text-border">·</span>
+                        <Badge
+                          variant={
+                            req.urgency === 'Urgent'
+                              ? 'destructive'
+                              : req.urgency === 'This week'
+                                ? 'default'
+                                : 'secondary'
+                          }
+                          className="h-4 px-1.5 text-[9px]"
+                        >
+                          {req.urgency}
+                        </Badge>
+                        {matchCount > 0 && (
+                          <>
+                            <span className="text-border">·</span>
+                            <span className="flex items-center gap-0.5 font-medium text-primary">
+                              <Leaf size={9} />
+                              {matchCount} available
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeRequest({ id: req._id })}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-destructive"
+                      aria-label="Delete request"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
-      {/* Edit dialog */}
-      <Dialog open={!!editId} onOpenChange={(open) => !open && setEditId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Request</DialogTitle>
-          </DialogHeader>
-          {formContent}
-          <DialogFooter>
-            <Button variant="destructive" size="icon" onClick={handleDelete}>
-              <Trash2 size={16} />
+      {/* Chat messages */}
+      {!showExisting && (
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4">
+          <div className="space-y-3">
+            {messages.map((msg, i) => {
+              if (msg.role === 'user') {
+                return (
+                  <div key={i} className="flex justify-end">
+                    <div className="max-w-[80%] rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+                      {msg.text}
+                    </div>
+                  </div>
+                )
+              }
+
+              if (msg.role === 'assistant') {
+                return (
+                  <div key={i} className="flex justify-start">
+                    <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-muted px-4 py-2.5 text-sm">
+                      {msg.text}
+                    </div>
+                  </div>
+                )
+              }
+
+              if (msg.role === 'card') {
+                const cat = CATEGORIES[msg.data.category]
+                const matchCount = getMatchCount(msg.data.category)
+                return (
+                  <div key={i} className="flex justify-start">
+                    <div className="w-full max-w-[90%] overflow-hidden rounded-2xl border border-border bg-card">
+                      <div className="p-3.5">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-lg">
+                            {cat?.icon ?? '📦'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold">{msg.data.title}</div>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                              <span>{cat?.label ?? msg.data.category}</span>
+                              <span className="text-border">·</span>
+                              <span className="font-medium text-foreground">{msg.data.budget}</span>
+                              <span className="text-border">·</span>
+                              <Badge
+                                variant={
+                                  msg.data.urgency === 'Urgent'
+                                    ? 'destructive'
+                                    : msg.data.urgency === 'This week'
+                                      ? 'default'
+                                      : 'secondary'
+                                }
+                                className="h-4 px-1.5 text-[9px]"
+                              >
+                                {msg.data.urgency}
+                              </Badge>
+                            </div>
+                            {matchCount > 0 && (
+                              <div className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-primary">
+                                <Users size={10} />
+                                {matchCount} listing{matchCount !== 1 ? 's' : ''} already available
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {!msg.posted && (
+                        <div className="flex border-t border-border">
+                          <button
+                            onClick={() => handlePost(i)}
+                            disabled={msg.posting}
+                            className="flex flex-1 items-center justify-center gap-2 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-muted disabled:opacity-50"
+                          >
+                            {msg.posting ? (
+                              <>
+                                <Loader2 size={14} className="animate-spin" />
+                                Posting...
+                              </>
+                            ) : (
+                              <>
+                                <Check size={14} />
+                                Post Request
+                              </>
+                            )}
+                          </button>
+                          <div className="w-px bg-border" />
+                          <button
+                            onClick={() => {
+                              setInput(messages.find((m, mi) => mi === i - 2 && m.role === 'user')
+                                ? (messages[i - 2] as { role: 'user'; text: string }).text
+                                : '')
+                              setMessages((prev) => prev.filter((_, mi) => mi < i - 1))
+                              inputRef.current?.focus()
+                            }}
+                            className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted"
+                          >
+                            <Pencil size={12} />
+                            Edit
+                          </button>
+                        </div>
+                      )}
+                      {msg.posted && (
+                        <div className="flex items-center justify-center gap-1.5 border-t border-primary/10 bg-primary/5 py-2 text-xs font-medium text-primary">
+                          <Check size={12} />
+                          Posted
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              }
+
+              return null
+            })}
+
+            {/* Thinking indicator */}
+            {thinking && (
+              <div className="flex justify-start">
+                <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-muted px-4 py-3">
+                  <div className="flex gap-1">
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/40" style={{ animationDelay: '0ms' }} />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/40" style={{ animationDelay: '150ms' }} />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/40" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Input bar */}
+      {!showExisting && (
+        <div className="shrink-0 border-t border-border/50 bg-background px-4 py-3" style={{ paddingBottom: 'calc(12px + var(--safe-bottom))' }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              handleSend()
+            }}
+            className="flex items-center gap-2"
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="e.g. I need 50 bricks for a garden wall..."
+              className="h-10 flex-1 rounded-xl border border-border bg-card px-4 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary/20"
+              disabled={thinking}
+            />
+            <Button
+              type="submit"
+              size="icon"
+              disabled={!input.trim() || thinking}
+              className="h-10 w-10 shrink-0 rounded-xl"
+            >
+              <Send size={16} />
             </Button>
-            <div className="flex-1" />
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button onClick={handleUpdate} disabled={!canSubmit}>
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+          </form>
+          <div className="mt-2 flex gap-1.5 overflow-x-auto">
+            {[
+              'I need some lumber for decking',
+              '50 bricks, under $200',
+              'Looking for steel rebar, urgent',
+            ].map((suggestion) => (
+              <button
+                key={suggestion}
+                onClick={() => {
+                  setInput(suggestion)
+                  inputRef.current?.focus()
+                }}
+                className="shrink-0 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

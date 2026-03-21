@@ -23,6 +23,16 @@ export default defineSchema({
     location: v.string(),
     lat: v.number(),
     lng: v.number(),
+    // Multi-item listings (from batch scanner)
+    items: v.optional(v.array(v.object({
+      title: v.string(),
+      category: v.string(),
+      price: v.number(),
+      originalPrice: v.number(),
+      condition: v.string(),
+      description: v.string(),
+      carbonSaved: v.number(),
+    }))),
   }).searchIndex("by_category", {
     searchField: "title",
     filterFields: ["category"],
