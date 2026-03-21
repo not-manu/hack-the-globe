@@ -1,7 +1,7 @@
 import { useRouter } from "next/router"
 import { useQuery } from "convex/react"
 import { api } from "../../convex/_generated/api"
-import { Search, Leaf, ChevronRight, Sparkles } from "lucide-react"
+import { Search, Leaf, ChevronRight, Zap } from "lucide-react"
 import Logo from "@/components/Logo"
 
 const CATEGORIES = [
@@ -20,7 +20,7 @@ export default function Home() {
   const listings = useQuery(api.listings.list)
   const requests = useQuery(api.requests.list)
 
-  const recent = listings?.slice(0, 4)
+  const recent = listings?.slice(0, 6)
 
   return (
     <>
@@ -48,31 +48,39 @@ export default function Home() {
         </button>
 
         {/* Categories */}
-        <section>
-          <h2 className="mb-3 text-sm font-semibold text-muted-foreground">
-            Categories
-          </h2>
-          <div className="grid grid-cols-4 gap-2">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => router.push(`/browse/${cat.id}`)}
-                className="flex flex-col items-center gap-1 rounded-xl border border-border bg-card py-3 transition-all active:scale-95"
-              >
-                <span className="text-xl">{cat.icon}</span>
-                <span className="text-[11px] font-medium text-muted-foreground">
-                  {cat.label}
-                </span>
-              </button>
-            ))}
+        <div className="hide-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => router.push(`/browse/${cat.id}`)}
+              className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-medium text-muted-foreground active:scale-95"
+            >
+              <span>{cat.icon}</span>
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
+        {/* AI Scanner */}
+        <button
+          onClick={() => router.push("/post?scan=1")}
+          className="flex w-full items-center gap-3.5 rounded-xl bg-primary p-4 text-left active:scale-[0.98]"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
+            <Zap size={20} className="text-white" />
           </div>
-        </section>
+          <div className="flex-1">
+            <div className="text-sm font-bold text-white">AI Scanner</div>
+            <div className="text-xs text-white/70">Snap, identify & list</div>
+          </div>
+          <ChevronRight size={16} className="text-white/60" />
+        </button>
 
         {/* Recent Listings */}
         <section>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-muted-foreground">
-              Recent Listings
+              Recent
             </h2>
             <button
               onClick={() => router.push("/browse/all")}
@@ -82,25 +90,27 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="space-y-2">
-            {listings === undefined ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex animate-pulse items-center gap-3 rounded-xl border border-border bg-card p-3">
-                  <div className="h-14 w-14 rounded-lg bg-muted" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3 w-2/3 rounded bg-muted" />
-                    <div className="h-3 w-1/3 rounded bg-muted" />
+          {listings === undefined ? (
+            <div className="grid grid-cols-2 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-border bg-card">
+                  <div className="aspect-square bg-muted" />
+                  <div className="space-y-2 p-3">
+                    <div className="h-3 w-3/4 rounded bg-muted" />
+                    <div className="h-3 w-1/2 rounded bg-muted" />
                   </div>
                 </div>
-              ))
-            ) : recent && recent.length > 0 ? (
-              recent.map((listing) => (
+              ))}
+            </div>
+          ) : recent && recent.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {recent.map((listing) => (
                 <button
                   key={listing._id}
                   onClick={() => router.push(`/listing/${listing._id}`)}
-                  className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-3 text-left transition-all active:scale-[0.98]"
+                  className="w-full overflow-hidden rounded-2xl border border-border bg-card text-left active:scale-[0.97]"
                 >
-                  <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+                  <div className="aspect-square overflow-hidden bg-muted">
                     {(listing.imageUrl || listing.image) && (
                       <img
                         src={listing.imageUrl ?? listing.image}
@@ -110,25 +120,29 @@ export default function Home() {
                       />
                     )}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold">{listing.title}</div>
-                    <div className="text-xs text-muted-foreground">{listing.location}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-bold">${listing.price}</div>
-                    <div className="flex items-center gap-1 text-[10px] text-primary">
-                      <Leaf size={10} />
-                      {listing.carbonSaved}kg
+                  <div className="p-3">
+                    <div className="truncate text-sm font-semibold">
+                      {listing.title}
+                    </div>
+                    <div className="mt-1 flex items-center justify-between">
+                      <span className="text-sm font-bold">${listing.price}</span>
+                      <span className="flex items-center gap-0.5 text-[10px] text-primary">
+                        <Leaf size={9} />
+                        {listing.carbonSaved}kg
+                      </span>
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-muted-foreground">
+                      {listing.location}
                     </div>
                   </div>
                 </button>
-              ))
-            ) : (
-              <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-                No listings yet
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+              No listings yet
+            </div>
+          )}
         </section>
 
         {/* Requests */}
@@ -161,23 +175,6 @@ export default function Home() {
             </div>
           </section>
         )}
-
-        {/* AI Scanner CTA */}
-        <button
-          onClick={() => router.push("/post?scan=1")}
-          className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-green-bg p-4 text-left ring-1 ring-primary/15 transition-all active:scale-[0.98]"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-green-light shadow-md shadow-primary/20">
-              <Sparkles size={22} className="text-white" />
-            </div>
-            <div className="flex-1">
-              <div className="text-sm font-bold text-foreground">AI Material Scanner</div>
-              <div className="text-xs text-muted-foreground">Snap, identify &amp; list in seconds</div>
-            </div>
-            <ChevronRight size={16} className="text-primary transition-transform group-active:translate-x-0.5" />
-          </div>
-        </button>
       </div>
     </>
   )
