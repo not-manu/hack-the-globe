@@ -5,46 +5,8 @@ import { useAuth } from '@/components/AuthContext'
 import { Leaf, ChevronRight, Camera, MapPin, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { FulfillmentBar } from '@/components/FulfillmentBar'
+import { CATEGORIES, SCAN_HERO_IMG, getCategoryInfo } from '@/lib/categories'
 import Logo from '@/components/Logo'
-
-const CATEGORY_IMAGES: Record<string, { label: string; img: string }> = {
-  lumber: {
-    label: 'Lumber',
-    img: 'https://images.unsplash.com/photo-1520333789090-1afc82db536a?w=400&h=400&fit=crop',
-  },
-  steel: {
-    label: 'Steel',
-    img: 'https://images.unsplash.com/photo-1530982011887-3cc11cc85693?w=400&h=400&fit=crop',
-  },
-  concrete: {
-    label: 'Concrete',
-    img: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop',
-  },
-  brick: {
-    label: 'Brick',
-    img: 'https://images.unsplash.com/photo-1590075865003-e48277faa558?w=400&h=400&fit=crop',
-  },
-  glass: {
-    label: 'Glass',
-    img: 'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=400&h=400&fit=crop',
-  },
-  pipe: {
-    label: 'Piping',
-    img: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&h=400&fit=crop',
-  },
-  electrical: {
-    label: 'Electrical',
-    img: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400&h=400&fit=crop',
-  },
-  fixtures: {
-    label: 'Fixtures',
-    img: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400&h=400&fit=crop',
-  },
-  other: {
-    label: 'Other',
-    img: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop',
-  },
-}
 
 export default function Home() {
   const router = useRouter()
@@ -78,7 +40,7 @@ export default function Home() {
         >
           <div className="absolute inset-0 bg-gradient-to-r from-neutral-900 via-neutral-900/90 to-neutral-900/40" />
           <img
-            src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&h=400&fit=crop"
+            src={SCAN_HERO_IMG}
             alt=""
             className="absolute inset-0 h-full w-full object-cover opacity-40 transition-transform duration-500 group-hover:scale-105"
           />
@@ -124,7 +86,7 @@ export default function Home() {
           ) : requests.length > 0 ? (
             <div className="space-y-3">
               {requests.map((req) => {
-                const cat = CATEGORY_IMAGES[req.category] ?? CATEGORY_IMAGES.other
+                const cat = getCategoryInfo(req.category)
                 const isFulfilled = req.status === 'fulfilled'
                 const pct = req.quantity
                   ? Math.round(((req.fulfilledQuantity ?? 0) / req.quantity) * 100)

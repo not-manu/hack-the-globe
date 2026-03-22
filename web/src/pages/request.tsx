@@ -16,18 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { FulfillmentBar } from '@/components/FulfillmentBar'
 import { useAuth } from '@/components/AuthContext'
-
-const CATEGORIES: Record<string, { label: string; icon: string }> = {
-  lumber: { label: 'Lumber', icon: '\u{1FAB5}' },
-  steel: { label: 'Steel', icon: '\u{1F529}' },
-  concrete: { label: 'Concrete', icon: '\u{1F9F1}' },
-  brick: { label: 'Brick', icon: '\u{1F3D7}\u{FE0F}' },
-  glass: { label: 'Glass', icon: '\u{1FA9F}' },
-  pipe: { label: 'Piping', icon: '\u{1F527}' },
-  electrical: { label: 'Electrical', icon: '\u{1F4A1}' },
-  fixtures: { label: 'Fixtures', icon: '\u{1F6BF}' },
-  other: { label: 'Other', icon: '\u{1F4E6}' },
-}
+import { CATEGORIES } from '@/lib/categories'
 
 type ParsedRequest = {
   title: string
@@ -216,7 +205,9 @@ export default function RequestPage() {
                   <div className="flex items-start justify-between gap-2 p-3.5">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-base">{cat?.icon ?? '📦'}</span>
+                        <div className="h-6 w-6 shrink-0 overflow-hidden rounded bg-muted">
+                          <img src={cat?.img ?? CATEGORIES.other.img} alt="" className="h-full w-full object-cover" />
+                        </div>
                         <span className="truncate text-sm font-semibold">
                           {req.title}
                         </span>
@@ -302,8 +293,8 @@ export default function RequestPage() {
                     <div className="w-full max-w-[90%] overflow-hidden rounded-2xl border border-border bg-card">
                       <div className="p-3.5">
                         <div className="flex items-start gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-lg">
-                            {cat?.icon ?? '📦'}
+                          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-muted">
+                            <img src={cat?.img ?? CATEGORIES.other.img} alt="" className="h-full w-full object-cover" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-semibold">{msg.data.title}</div>

@@ -5,17 +5,11 @@ import { api } from "../../../convex/_generated/api"
 import { ArrowLeft, Search, MapPin, Leaf, SlidersHorizontal } from "lucide-react"
 
 
+import { CATEGORIES as CAT_MAP } from '@/lib/categories'
+
 const CATEGORIES = [
-  { id: "all", label: "All", icon: "\u{1F4E6}" },
-  { id: "lumber", label: "Lumber", icon: "\u{1FAB5}" },
-  { id: "steel", label: "Steel", icon: "\u{1F529}" },
-  { id: "concrete", label: "Concrete", icon: "\u{1F9F1}" },
-  { id: "brick", label: "Brick", icon: "\u{1F3D7}\u{FE0F}" },
-  { id: "glass", label: "Glass", icon: "\u{1FA9F}" },
-  { id: "pipe", label: "Piping", icon: "\u{1F527}" },
-  { id: "electrical", label: "Electrical", icon: "\u{1F4A1}" },
-  { id: "fixtures", label: "Fixtures", icon: "\u{1F6BF}" },
-  { id: "other", label: "Other", icon: "\u{1F3F7}\u{FE0F}" },
+  { id: "all", label: "All" },
+  ...Object.entries(CAT_MAP).map(([id, info]) => ({ id, label: info.label })),
 ]
 
 export default function Browse() {
