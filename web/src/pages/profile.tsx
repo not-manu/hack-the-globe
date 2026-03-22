@@ -7,6 +7,7 @@ import {
   Leaf,
   ChevronRight,
   LogOut,
+  Clock,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/components/AuthContext'
@@ -16,8 +17,13 @@ export default function Profile() {
   const { username, logout } = useAuth()
   const listings = useQuery(api.listings.list)
   const requests = useQuery(api.requests.list)
+  const waitlistItems = useQuery(
+    api.waitlist.listBySeller,
+    username ? { seller: username } : 'skip',
+  )
   const myListings = listings?.filter((l) => l.seller === username)
   const myRequests = requests?.filter((r) => r.requester === username)
+  const myHoldItems = waitlistItems?.filter((w) => w.status === 'waiting') ?? []
   const myCarbonSaved = myListings?.reduce((s, l) => s + l.carbonSaved, 0) ?? 0
 
   return (
@@ -73,6 +79,20 @@ export default function Profile() {
             <span className="flex-1 text-sm font-semibold">My Requests</span>
             <span className="text-sm font-bold text-muted-foreground">
               {myRequests?.length ?? 0}
+            </span>
+            <ChevronRight size={16} className="text-muted-foreground" />
+          </button>
+
+          <button
+            onClick={() => router.push('/hold')}
+            className="flex w-full items-center gap-3.5 rounded-2xl border border-border bg-card p-3.5 text-left active:scale-[0.98]"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/5 text-orange-500">
+              <Clock size={18} />
+            </div>
+            <span className="flex-1 text-sm font-semibold">Selling Hold</span>
+            <span className="text-sm font-bold text-muted-foreground">
+              {myHoldItems.length}
             </span>
             <ChevronRight size={16} className="text-muted-foreground" />
           </button>

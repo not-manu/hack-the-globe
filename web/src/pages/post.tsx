@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
@@ -90,10 +90,43 @@ export default function ScanToSell() {
 
   // Detected materials from scan
   const [materials, setMaterials] = useState<DetectedMaterial[]>([])
-  // Matched pools the user can join
-  const [pools, setPools] = useState<MatchedPool[]>([])
-  // Categories with no pool match (will go to selling hold)
-  const [holdCategories, setHoldCategories] = useState<string[]>([])
+  // Per-pool contribute amounts (keyed by requestId)
+  const [contributeAmounts, setContributeAmounts] = useState<Record<string, number>>({})
+
+  // Reactively compute matching pools + hold categories from materials + openRequests
+  const { pools, holdCategories } = useMemo(() => {
+    if (materials.length === 0) return { pools: [] as MatchedPool[], holdCategories: [] as string[] }
+    const reqs = openRequests ?? []
+    const detectedCategories = [...new Set(materials.map((d) => d.category))]
+    const matched: MatchedPool[] = []
+    const unmatched: string[] = []
+
+    for (const cat of detectedCategories) {
+      const matchingReqs = reqs.filter(
+        (r) => r.category === cat && (r.status === 'open' || !r.status),
+      )
+      let hasOpenPool = false
+      for (const req of matchingReqs) {
+        const remaining = (req.quantity ?? 0) - (req.fulfilledQuantity ?? 0)
+        if (remaining > 0) {
+          hasOpenPool = true
+          matched.push({
+            requestId: req._id,
+            title: req.title,
+            category: req.category,
+            requester: req.requester,
+            urgency: req.urgency,
+            quantity: req.quantity ?? 0,
+            fulfilledQuantity: req.fulfilledQuantity ?? 0,
+            unit: req.unit ?? 'pcs',
+            contributeAmount: contributeAmounts[req._id] ?? 1,
+          })
+        }
+      }
+      if (!hasOpenPool) unmatched.push(cat)
+    }
+    return { pools: matched, holdCategories: unmatched }
+  }, [materials, openRequests, contributeAmounts])
 
   // Action state
   const [joining, setJoining] = useState(false)
@@ -211,7 +244,7 @@ export default function ScanToSell() {
         return
       }
 
-      // Build detected materials
+      // Build detected materials — pools are computed reactively via useMemo
       const detected: DetectedMaterial[] = data.items.map((item) => ({
         id: `m-${nextId++}`,
         material: item.material,
@@ -223,41 +256,6 @@ export default function ScanToSell() {
         photoUrl: dataUrl,
       }))
       setMaterials(detected)
-
-      // Auto-match to open request pools
-      const detectedCategories = [...new Set(detected.map((d) => d.category))]
-      const matched: MatchedPool[] = []
-      const unmatched: string[] = []
-
-      for (const cat of detectedCategories) {
-        const matchingReqs = (openRequests ?? []).filter(
-          (r) => r.category === cat && (r.status === 'open' || !r.status),
-        )
-        if (matchingReqs.length > 0) {
-          for (const req of matchingReqs) {
-            const remaining = (req.quantity ?? 0) - (req.fulfilledQuantity ?? 0)
-            if (remaining > 0) {
-              matched.push({
-                requestId: req._id,
-                title: req.title,
-                category: req.category,
-                requester: req.requester,
-                urgency: req.urgency,
-                quantity: req.quantity ?? 0,
-                fulfilledQuantity: req.fulfilledQuantity ?? 0,
-                unit: req.unit ?? 'pcs',
-                contributeAmount: 1, // default
-              })
-            }
-          }
-        }
-        if (matchingReqs.length === 0 || matchingReqs.every((r) => ((r.quantity ?? 0) - (r.fulfilledQuantity ?? 0)) <= 0)) {
-          unmatched.push(cat)
-        }
-      }
-
-      setPools(matched)
-      setHoldCategories(unmatched)
     } catch (err) {
       setScanError(err instanceof Error ? err.message : 'Failed to analyze')
     } finally {
@@ -267,9 +265,7 @@ export default function ScanToSell() {
 
   // Update contribute amount for a pool
   const setPoolAmount = (requestId: Id<'requests'>, amount: number) => {
-    setPools((prev) =>
-      prev.map((p) => (p.requestId === requestId ? { ...p, contributeAmount: amount } : p)),
-    )
+    setContributeAmounts((prev) => ({ ...prev, [requestId]: amount }))
   }
 
   // --- Join all pools + auto-hold ---
@@ -372,23 +368,34 @@ export default function ScanToSell() {
           )}
         </div>
 
-        <div className="flex w-full max-w-[280px] gap-2">
-          <Button className="flex-1" onClick={() => router.push('/')}>
-            Home
-          </Button>
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => {
-              setDone(false)
-              setResults(null)
-              setMaterials([])
-              setPools([])
-              setHoldCategories([])
-            }}
-          >
-            Scan More
-          </Button>
+        <div className="flex w-full max-w-[280px] flex-col gap-2">
+          <div className="flex gap-2">
+            <Button className="flex-1" onClick={() => router.push('/')}>
+              Home
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setDone(false)
+                setResults(null)
+                setMaterials([])
+                setContributeAmounts({})
+              }}
+            >
+              Scan More
+            </Button>
+          </div>
+          {results.onHold.length > 0 && (
+            <Button
+              variant="outline"
+              className="w-full gap-1.5"
+              onClick={() => router.push('/hold')}
+            >
+              <Clock size={14} />
+              View Selling Hold
+            </Button>
+          )}
         </div>
       </div>
     )
