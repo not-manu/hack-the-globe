@@ -12,51 +12,51 @@ import {
   ImageIcon,
   Leaf,
   Loader2,
-  ChevronDown,
-  ChevronUp,
-  Trash2,
-  Users,
   Check,
-  Plus,
-  Link,
+  Users,
   Clock,
+  ChevronRight,
+  Plus,
+  Minus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { FulfillmentBar } from '@/components/FulfillmentBar'
 import { useAuth } from '@/components/AuthContext'
 
-const CATEGORIES = [
-  { id: 'lumber', label: '\u{1FAB5} Lumber' },
-  { id: 'steel', label: '\u{1F529} Steel' },
-  { id: 'concrete', label: '\u{1F9F1} Concrete' },
-  { id: 'brick', label: '\u{1F3D7}\u{FE0F} Brick' },
-  { id: 'glass', label: '\u{1FA9F} Glass' },
-  { id: 'pipe', label: '\u{1F527} Piping' },
-  { id: 'electrical', label: '\u{1F4A1} Electrical' },
-  { id: 'fixtures', label: '\u{1F6BF} Fixtures' },
-  { id: 'other', label: '\u{1F4E6} Other' },
-]
+const CATEGORIES: Record<string, { label: string; icon: string }> = {
+  lumber: { label: 'Lumber', icon: '\u{1FAB5}' },
+  steel: { label: 'Steel', icon: '\u{1F529}' },
+  concrete: { label: 'Concrete', icon: '\u{1F9F1}' },
+  brick: { label: 'Brick', icon: '\u{1F3D7}\u{FE0F}' },
+  glass: { label: 'Glass', icon: '\u{1FA9F}' },
+  pipe: { label: 'Piping', icon: '\u{1F527}' },
+  electrical: { label: 'Electrical', icon: '\u{1F4A1}' },
+  fixtures: { label: 'Fixtures', icon: '\u{1F6BF}' },
+  other: { label: 'Other', icon: '\u{1F4E6}' },
+}
 
-type ScannedItem = {
+type DetectedMaterial = {
   id: string
   material: string
   category: string
   condition: string
   confidence: number
-  suggestedPrice: string
   description: string
   carbonSaved: number
-  photoUrl: string | null
-  // editable overrides
-  editTitle: string
-  editPrice: string
-  editCategory: string
-  editLocation: string
-  // auto-linking
-  linkedRequestId: string | null
-  linkedRequestTitle: string | null
-  shareToRequest: boolean
+  photoUrl: string
+}
+
+type MatchedPool = {
+  requestId: Id<'requests'>
+  title: string
+  category: string
+  requester: string
+  urgency: string
+  quantity: number
+  fulfilledQuantity: number
+  unit: string
+  contributeAmount: number
 }
 
 type ScanApiResult = {
@@ -73,34 +73,34 @@ type ScanApiResult = {
 
 const SCAN_PHRASES = [
   'Identifying materials...',
-  'Detecting multiple items...',
+  'Matching to open pools...',
   'Assessing condition...',
-  'Estimating prices...',
+  'Finding nearby buyers...',
   'Calculating CO2 impact...',
 ]
 
-let nextItemId = 1
+let nextId = 1
 
-export default function PostMaterial() {
+export default function ScanToSell() {
   const router = useRouter()
   const { username } = useAuth()
-  const requests = useQuery(api.requests.listOpen)
-  const generateUploadUrl = useMutation(api.listings.generateUploadUrl)
-  const createListing = useMutation(api.listings.create)
+  const openRequests = useQuery(api.requests.listOpen)
   const contributeMutation = useMutation(api.contributions.contribute)
   const addToWaitlist = useMutation(api.waitlist.add)
 
-  // Batch state
-  const [items, setItems] = useState<ScannedItem[]>([])
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [posting, setPosting] = useState(false)
-  const [postedId, setPostedId] = useState<string | null>(null)
-  const [location, setLocation] = useState('')
+  // Detected materials from scan
+  const [materials, setMaterials] = useState<DetectedMaterial[]>([])
+  // Matched pools the user can join
+  const [pools, setPools] = useState<MatchedPool[]>([])
+  // Categories with no pool match (will go to selling hold)
+  const [holdCategories, setHoldCategories] = useState<string[]>([])
 
-  // Post result tracking
-  const [autoResults, setAutoResults] = useState<{
-    contributed: Array<{ title: string; quantity: number; unit: string }>
-    waitlisted: string[]
+  // Action state
+  const [joining, setJoining] = useState(false)
+  const [done, setDone] = useState(false)
+  const [results, setResults] = useState<{
+    joined: Array<{ title: string; amount: number; unit: string }>
+    onHold: string[]
   } | null>(null)
 
   // Camera state
@@ -115,18 +115,14 @@ export default function PostMaterial() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (router.query.scan === '1') {
-      startCamera()
-    }
+    if (router.query.scan === '1') startCamera()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query.scan])
 
   useEffect(() => {
     if (!scanning) return
-    const interval = setInterval(() => {
-      setScanPhrase((p) => (p + 1) % SCAN_PHRASES.length)
-    }, 1800)
-    return () => clearInterval(interval)
+    const iv = setInterval(() => setScanPhrase((p) => (p + 1) % SCAN_PHRASES.length), 1800)
+    return () => clearInterval(iv)
   }, [scanning])
 
   // --- Camera ---
@@ -156,13 +152,9 @@ export default function PostMaterial() {
   const flipCamera = useCallback(() => {
     const next = facingMode === 'environment' ? 'user' : 'environment'
     setFacingMode(next)
-    if (streamRef.current)
-      streamRef.current.getTracks().forEach((t) => t.stop())
+    if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
     navigator.mediaDevices
-      .getUserMedia({
-        video: { facingMode: next, width: { ideal: 1280 }, height: { ideal: 960 } },
-        audio: false,
-      })
+      .getUserMedia({ video: { facingMode: next, width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false })
       .then((stream) => {
         streamRef.current = stream
         if (videoRef.current) videoRef.current.srcObject = stream
@@ -190,16 +182,15 @@ export default function PostMaterial() {
       if (!file) return
       const reader = new FileReader()
       reader.onloadend = async () => {
-        const dataUrl = reader.result as string
         stopCamera()
-        await scanImage(dataUrl)
+        await scanImage(reader.result as string)
       }
       reader.readAsDataURL(file)
     },
     [stopCamera],
   )
 
-  // --- Scan ---
+  // --- Scan & match ---
   const scanImage = async (dataUrl: string) => {
     setScanning(true)
     setScanError(null)
@@ -215,274 +206,198 @@ export default function PostMaterial() {
         throw new Error(err.error || 'Scan failed')
       }
       const data: ScanApiResult = await res.json()
-      if (data.items && data.items.length > 0) {
-        const newItems: ScannedItem[] = data.items.map((item) => {
-          // Auto-match to best open request in same category
-          const matchingReqs = requests?.filter(
-            (r) => r.category === item.category && (r.status === 'open' || !r.status),
-          ) ?? []
-          const bestMatch = matchingReqs.length > 0 ? matchingReqs[0] : null
-
-          return {
-            id: `item-${nextItemId++}`,
-            ...item,
-            photoUrl: dataUrl,
-            editTitle: item.material,
-            editPrice: item.suggestedPrice.replace(/[^0-9.]/g, ''),
-            editCategory: item.category,
-            editLocation: location || '',
-            linkedRequestId: bestMatch?._id ?? null,
-            linkedRequestTitle: bestMatch?.title ?? null,
-            shareToRequest: bestMatch !== null, // auto-ON if match found
-          }
-        })
-        setItems((prev) => [...prev, ...newItems])
-      } else {
-        setScanError('No materials detected in this photo. Try a different angle.')
+      if (!data.items || data.items.length === 0) {
+        setScanError('No materials detected. Try a different angle.')
+        return
       }
+
+      // Build detected materials
+      const detected: DetectedMaterial[] = data.items.map((item) => ({
+        id: `m-${nextId++}`,
+        material: item.material,
+        category: item.category,
+        condition: item.condition,
+        confidence: item.confidence,
+        description: item.description,
+        carbonSaved: item.carbonSaved,
+        photoUrl: dataUrl,
+      }))
+      setMaterials(detected)
+
+      // Auto-match to open request pools
+      const detectedCategories = [...new Set(detected.map((d) => d.category))]
+      const matched: MatchedPool[] = []
+      const unmatched: string[] = []
+
+      for (const cat of detectedCategories) {
+        const matchingReqs = (openRequests ?? []).filter(
+          (r) => r.category === cat && (r.status === 'open' || !r.status),
+        )
+        if (matchingReqs.length > 0) {
+          for (const req of matchingReqs) {
+            const remaining = (req.quantity ?? 0) - (req.fulfilledQuantity ?? 0)
+            if (remaining > 0) {
+              matched.push({
+                requestId: req._id,
+                title: req.title,
+                category: req.category,
+                requester: req.requester,
+                urgency: req.urgency,
+                quantity: req.quantity ?? 0,
+                fulfilledQuantity: req.fulfilledQuantity ?? 0,
+                unit: req.unit ?? 'pcs',
+                contributeAmount: 1, // default
+              })
+            }
+          }
+        }
+        if (matchingReqs.length === 0 || matchingReqs.every((r) => ((r.quantity ?? 0) - (r.fulfilledQuantity ?? 0)) <= 0)) {
+          unmatched.push(cat)
+        }
+      }
+
+      setPools(matched)
+      setHoldCategories(unmatched)
     } catch (err) {
-      setScanError(
-        err instanceof Error ? err.message : 'Failed to analyze materials',
-      )
+      setScanError(err instanceof Error ? err.message : 'Failed to analyze')
     } finally {
       setScanning(false)
     }
   }
 
-  // --- Item management ---
-  const removeItem = (id: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== id))
-    if (expandedId === id) setExpandedId(null)
-  }
-
-  const updateItem = (id: string, updates: Partial<ScannedItem>) => {
-    setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, ...updates } : i)),
+  // Update contribute amount for a pool
+  const setPoolAmount = (requestId: Id<'requests'>, amount: number) => {
+    setPools((prev) =>
+      prev.map((p) => (p.requestId === requestId ? { ...p, contributeAmount: amount } : p)),
     )
   }
 
-  const toggleExpand = (id: string) => {
-    setExpandedId((prev) => (prev === id ? null : id))
-  }
+  // --- Join all pools + auto-hold ---
+  const handleJoinAll = async () => {
+    if (!username) return
+    setJoining(true)
+    const joined: Array<{ title: string; amount: number; unit: string }> = []
+    const onHold: string[] = []
 
-  // --- Auto-link helpers ---
-  // Count how many items are auto-linked to requests
-  const linkedCount = items.filter((i) => i.shareToRequest && i.linkedRequestId).length
-  const unmatchedCategories = [...new Set(
-    items.filter((i) => !i.linkedRequestId).map((i) => i.editCategory),
-  )]
-
-  // Toggle share for an item
-  const toggleShare = (itemId: string) => {
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === itemId ? { ...i, shareToRequest: !i.shareToRequest } : i,
-      ),
-    )
-  }
-
-  // --- Post all ---
-  const totalPrice = items.reduce((sum, i) => sum + (parseFloat(i.editPrice) || 0), 0)
-  const totalCarbon = items.reduce((sum, i) => sum + i.carbonSaved, 0)
-  const canPost = items.length > 0 && items.every((i) => i.editTitle && i.editCategory && i.editPrice) && !posting
-
-  const handlePostAll = async () => {
-    if (!canPost) return
-    setPosting(true)
-    try {
-      // Upload all unique photos to Convex storage
-      const allStorageIds: Id<'_storage'>[] = []
-      const uploadedUrls = new Set<string>()
-      for (const item of items) {
-        if (item.photoUrl && !uploadedUrls.has(item.photoUrl)) {
-          uploadedUrls.add(item.photoUrl)
-          const blob = await dataUrlToBlob(item.photoUrl)
-          const uploadUrl = await generateUploadUrl()
-          const res = await fetch(uploadUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': blob.type },
-            body: blob,
-          })
-          const { storageId } = await res.json()
-          allStorageIds.push(storageId)
-        }
+    // Contribute to each pool
+    for (const pool of pools) {
+      if (pool.contributeAmount <= 0) continue
+      try {
+        await contributeMutation({
+          requestId: pool.requestId,
+          contributor: username,
+          quantity: pool.contributeAmount,
+        })
+        joined.push({ title: pool.title, amount: pool.contributeAmount, unit: pool.unit })
+      } catch (err) {
+        console.error('Join pool error:', err)
       }
-
-      // Build items array for the listing
-      const listingItems = items.map((item) => ({
-        title: item.editTitle,
-        category: item.editCategory,
-        price: parseFloat(item.editPrice) || 0,
-        originalPrice: Math.round((parseFloat(item.editPrice) || 0) * 1.6),
-        condition: item.condition,
-        description: item.description,
-        carbonSaved: item.carbonSaved,
-      }))
-
-      // Determine primary category (most common)
-      const catCounts: Record<string, number> = {}
-      listingItems.forEach((i) => { catCounts[i.category] = (catCounts[i.category] || 0) + 1 })
-      const primaryCategory = Object.entries(catCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? items[0].editCategory
-
-      // Create ONE listing with all items
-      const listingTitle = items.length === 1
-        ? items[0].editTitle
-        : `${items.length} surplus materials`
-
-      const newId = await createListing({
-        title: listingTitle,
-        category: primaryCategory,
-        price: totalPrice,
-        condition: items[0].condition,
-        description: items.length === 1
-          ? items[0].description
-          : `Batch of ${items.length} materials: ${items.map((i) => i.editTitle).join(', ')}`,
-        location: location || items[0].editLocation || 'Toronto, ON',
-        carbonSaved: totalCarbon,
-        images: allStorageIds,
-        seller: username ?? 'Anonymous',
-        items: listingItems,
-      })
-
-      // --- Auto-contribute to linked requests ---
-      const contributed: Array<{ title: string; quantity: number; unit: string }> = []
-      const itemsToShare = items.filter((i) => i.shareToRequest && i.linkedRequestId)
-      for (const item of itemsToShare) {
-        try {
-          const req = requests?.find((r) => r._id === item.linkedRequestId)
-          if (req && (req.status === 'open' || !req.status)) {
-            const remaining = (req.quantity ?? 0) - (req.fulfilledQuantity ?? 0)
-            const shareQty = Math.max(1, Math.min(1, remaining))
-            if (shareQty > 0 && remaining > 0) {
-              await contributeMutation({
-                requestId: item.linkedRequestId as Id<'requests'>,
-                contributor: username ?? 'Anonymous',
-                quantity: shareQty,
-              })
-              contributed.push({
-                title: req.title,
-                quantity: shareQty,
-                unit: req.unit ?? 'pcs',
-              })
-            }
-          }
-        } catch (err) {
-          console.error('Auto-contribute error:', err)
-        }
-      }
-
-      // --- Auto-join waitlist for unmatched categories ---
-      const waitlisted: string[] = []
-      const unmatchedCats = [...new Set(
-        items.filter((i) => !i.linkedRequestId).map((i) => i.editCategory),
-      )]
-      for (const cat of unmatchedCats) {
-        try {
-          const catItem = items.find((i) => i.editCategory === cat)
-          await addToWaitlist({
-            seller: username ?? 'Anonymous',
-            category: cat,
-            material: catItem?.editTitle ?? cat,
-            quantity: 1,
-            unit: 'pcs',
-          })
-          const catLabel = CATEGORIES.find((c) => c.id === cat)?.label ?? cat
-          waitlisted.push(catLabel)
-        } catch (err) {
-          console.error('Auto-waitlist error:', err)
-        }
-      }
-
-      setAutoResults({ contributed, waitlisted })
-      setPostedId(newId as unknown as string)
-    } catch (err) {
-      console.error('Failed to post listing:', err)
-      setScanError('Failed to post listing. Please try again.')
-    } finally {
-      setPosting(false)
     }
+
+    // Auto-join waitlist for unmatched categories
+    for (const cat of holdCategories) {
+      try {
+        const mat = materials.find((m) => m.category === cat)
+        await addToWaitlist({
+          seller: username,
+          category: cat,
+          material: mat?.material ?? cat,
+          quantity: 1,
+          unit: 'pcs',
+        })
+        onHold.push(CATEGORIES[cat]?.label ?? cat)
+      } catch (err) {
+        console.error('Waitlist error:', err)
+      }
+    }
+
+    setResults({ joined, onHold })
+    setDone(true)
+    setJoining(false)
   }
 
-  // --- Success screen ---
-  if (postedId) {
+  const totalCarbon = materials.reduce((s, m) => s + m.carbonSaved, 0)
+
+  // ─── Done screen ───
+  if (done && results) {
     return (
-      <div className="flex min-h-[80dvh] flex-col items-center justify-center gap-6 px-5">
+      <div className="flex min-h-[80dvh] flex-col items-center justify-center gap-5 px-5">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
           <Check size={36} className="text-primary" />
         </div>
         <div className="text-center">
-          <h2 className="text-2xl font-bold">
-            Listed & Shared!
-          </h2>
-          <p className="mt-1 text-sm font-medium text-foreground">
-            {items.length} item{items.length !== 1 ? 's' : ''} listed
-          </p>
-          <p className="mx-auto mt-2 max-w-[280px] text-sm text-muted-foreground">
-            Your materials are live. Everything has been auto-linked.
+          <h2 className="text-2xl font-bold">You&apos;re in!</h2>
+          <p className="mx-auto mt-2 max-w-[260px] text-sm text-muted-foreground">
+            {results.joined.length > 0 && results.onHold.length > 0
+              ? 'Joined pools and placed on selling hold.'
+              : results.joined.length > 0
+                ? 'Successfully joined request pools.'
+                : 'Placed on selling hold — we\'ll notify you when buyers appear.'}
           </p>
         </div>
 
-        {/* Stats bar */}
-        <div className="flex items-center gap-4 rounded-xl bg-primary/5 px-6 py-3">
-          <div className="text-center">
-            <div className="text-lg font-bold">${totalPrice.toFixed(0)}</div>
-            <div className="text-[10px] text-muted-foreground">Total value</div>
-          </div>
-          <div className="h-8 w-px bg-border" />
-          <div className="text-center">
-            <div className="text-lg font-bold text-primary">{totalCarbon}kg</div>
-            <div className="flex items-center gap-1 text-[10px] text-primary">
-              <Leaf size={9} />
-              CO2 saved
-            </div>
-          </div>
-        </div>
-
-        {/* Auto-link results */}
-        {autoResults && (autoResults.contributed.length > 0 || autoResults.waitlisted.length > 0) && (
-          <div className="w-full max-w-[320px] space-y-2">
-            {autoResults.contributed.map((c, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2.5 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5"
-              >
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <Link size={12} className="text-primary" />
-                </div>
-                <div className="min-w-0 flex-1 text-xs">
-                  <span className="font-bold text-primary">Shared {c.quantity} {c.unit}</span>
-                  <span className="text-muted-foreground"> to </span>
-                  <span className="font-semibold text-foreground">{c.title}</span>
-                </div>
-              </div>
-            ))}
-            {autoResults.waitlisted.length > 0 && (
-              <div className="flex items-center gap-2.5 rounded-xl border border-border bg-muted/50 px-3.5 py-2.5">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-                  <Clock size={12} className="text-muted-foreground" />
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  <span className="font-semibold text-foreground">On selling hold</span> for {autoResults.waitlisted.join(', ')} — you&apos;ll be notified when a buyer appears
-                </div>
-              </div>
-            )}
+        {totalCarbon > 0 && (
+          <div className="flex items-center gap-2 rounded-xl bg-primary/5 px-5 py-2.5">
+            <Leaf size={16} className="text-primary" />
+            <span className="text-sm font-bold text-primary">{totalCarbon}kg CO2 saved</span>
           </div>
         )}
 
+        <div className="w-full max-w-[320px] space-y-2">
+          {results.joined.map((j, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-2.5 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5"
+            >
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <Users size={12} className="text-primary" />
+              </div>
+              <div className="min-w-0 flex-1 text-xs">
+                <span className="font-bold text-primary">Joined pool</span>
+                <span className="text-muted-foreground"> — contributed {j.amount} {j.unit} to </span>
+                <span className="font-semibold text-foreground">{j.title}</span>
+              </div>
+            </div>
+          ))}
+          {results.onHold.length > 0 && (
+            <div className="flex items-center gap-2.5 rounded-xl border border-border bg-muted/50 px-3.5 py-2.5">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+                <Clock size={12} className="text-muted-foreground" />
+              </div>
+              <div className="text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Selling hold</span> for{' '}
+                {results.onHold.join(', ')} — you&apos;ll be notified when a buyer appears
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="flex w-full max-w-[280px] gap-2">
-          <Button
-            className="flex-1"
-            onClick={() => router.push(`/listing/${postedId}`)}
-          >
-            View Listing
-          </Button>
-          <Button variant="outline" className="flex-1" onClick={() => router.push('/')}>
+          <Button className="flex-1" onClick={() => router.push('/')}>
             Home
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => {
+              setDone(false)
+              setResults(null)
+              setMaterials([])
+              setPools([])
+              setHoldCategories([])
+            }}
+          >
+            Scan More
           </Button>
         </div>
       </div>
     )
   }
+
+  // ─── Main page ───
+  const hasResults = materials.length > 0
+  const hasPoolsToJoin = pools.length > 0
+  const hasHolds = holdCategories.length > 0
 
   return (
     <>
@@ -496,39 +411,36 @@ export default function PostMaterial() {
           <ArrowLeft size={20} />
         </button>
         <div className="flex-1">
-          <h1 className="text-lg font-bold">List Surplus</h1>
-          {items.length > 0 && (
-            <p className="text-[11px] text-muted-foreground">
-              {items.length} item{items.length !== 1 ? 's' : ''} · ~${totalPrice.toFixed(0)} · {totalCarbon}kg CO2
-            </p>
-          )}
+          <h1 className="text-lg font-bold">Scan to Sell</h1>
+          <p className="text-[11px] text-muted-foreground">
+            {hasResults
+              ? `${materials.length} material${materials.length !== 1 ? 's' : ''} detected`
+              : 'Snap a photo to find matching buyers'}
+          </p>
         </div>
       </div>
 
       <div className="space-y-4 px-5 pb-8">
 
-        {/* ── Hero: when no items yet and not scanning ── */}
-        {items.length === 0 && !showCamera && !scanning && (
+        {/* ── Hero: no scan yet ── */}
+        {!hasResults && !showCamera && !scanning && (
           <div className="ai-fade-in flex flex-col items-center gap-5 pb-2 pt-4">
             <div className="relative">
               <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary">
-                <Zap size={36} className="text-white" />
+                <Camera size={36} className="text-white" />
               </div>
               <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-green-light ring-4 ring-background" />
             </div>
             <div className="text-center">
               <h2 className="text-xl font-bold tracking-tight">
-                Scan your surplus
+                Scan your material
               </h2>
               <p className="mx-auto mt-1.5 max-w-[280px] text-sm text-muted-foreground">
-                Take a photo and AI will detect every material — add them all to your batch in one go.
+                AI will detect what you have and instantly match you with buyers looking for it.
               </p>
             </div>
             <div className="flex w-full gap-3">
-              <Button
-                onClick={startCamera}
-                className="flex-1 gap-2 py-6 text-[15px] font-bold"
-              >
+              <Button onClick={startCamera} className="flex-1 gap-2 py-6 text-[15px] font-bold">
                 <Camera size={18} />
                 Camera
               </Button>
@@ -547,58 +459,33 @@ export default function PostMaterial() {
         {/* ── Camera ── */}
         {showCamera && (
           <div className="ai-camera-in relative aspect-[3/4] w-full overflow-hidden rounded-3xl bg-black">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="h-full w-full object-cover"
-            />
+            <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
             <div className="ai-scan-beam pointer-events-none absolute left-8 right-8 h-[2px] bg-primary/80 shadow-[0_0_16px_2px_rgba(22,163,74,0.35)]" />
             <div className="absolute left-5 top-5 h-8 w-8 rounded-tl-lg border-l-2 border-t-2 border-white/70" />
             <div className="absolute right-5 top-5 h-8 w-8 rounded-tr-lg border-r-2 border-t-2 border-white/70" />
             <div className="absolute bottom-5 left-5 h-8 w-8 rounded-bl-lg border-b-2 border-l-2 border-white/70" />
             <div className="absolute bottom-5 right-5 h-8 w-8 rounded-br-lg border-b-2 border-r-2 border-white/70" />
             <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-6 bg-gradient-to-t from-black/60 to-transparent px-5 pb-7 pt-14">
-              <button
-                onClick={flipCamera}
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-sm active:scale-90"
-                aria-label="Flip camera"
-              >
+              <button onClick={flipCamera} className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-sm active:scale-90" aria-label="Flip camera">
                 <SwitchCamera size={18} />
               </button>
-              <button
-                onClick={captureAndScan}
-                className="flex h-[68px] w-[68px] items-center justify-center rounded-full border-[3px] border-white active:scale-95"
-                aria-label="Capture and scan"
-              >
+              <button onClick={captureAndScan} className="flex h-[68px] w-[68px] items-center justify-center rounded-full border-[3px] border-white active:scale-95" aria-label="Capture">
                 <span className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-primary">
                   <Zap size={24} className="text-white" />
                 </span>
               </button>
-              <button
-                onClick={stopCamera}
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-sm active:scale-90"
-                aria-label="Close camera"
-              >
+              <button onClick={stopCamera} className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-sm active:scale-90" aria-label="Close">
                 <X size={18} />
               </button>
             </div>
           </div>
         )}
 
-        {/* Hidden elements */}
+        {/* Hidden */}
         <canvas ref={canvasRef} className="hidden" />
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
+        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileUpload} className="hidden" />
 
-        {/* ── Scanning animation ── */}
+        {/* ── Scanning ── */}
         {scanning && (
           <div className="ai-fade-in flex flex-col items-center gap-4 py-8">
             <div className="relative flex h-16 w-16 items-center justify-center">
@@ -606,7 +493,7 @@ export default function PostMaterial() {
               <Zap size={24} className="text-primary" />
             </div>
             <div className="text-center">
-              <div className="text-base font-bold">Analyzing photo</div>
+              <div className="text-base font-bold">Analyzing & matching</div>
               <div className="ai-phrase mt-1 text-sm text-muted-foreground" key={scanPhrase}>
                 {SCAN_PHRASES[scanPhrase]}
               </div>
@@ -616,182 +503,166 @@ export default function PostMaterial() {
 
         {/* ── Error ── */}
         {scanError && (
-          <div className="ai-fade-in rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
+          <div className="ai-fade-in rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             {scanError}
-            <button
-              onClick={() => setScanError(null)}
-              className="ml-2 text-xs font-medium underline"
-            >
+            <button onClick={() => setScanError(null)} className="ml-2 text-xs font-medium underline">
               Dismiss
             </button>
           </div>
         )}
 
-        {/* ── Item list ── */}
-        {items.length > 0 && (
-          <div className="space-y-2.5">
-            {items.map((item, index) => {
-              const isExpanded = expandedId === item.id
-              const catLabel = CATEGORIES.find((c) => c.id === item.editCategory)?.label ?? item.editCategory
-
-              return (
-                <div
-                  key={item.id}
-                  className="ai-fade-in overflow-hidden rounded-xl border border-border bg-card"
-                  style={{ animationDelay: `${index * 60}ms` }}
-                >
-                  {/* Card header */}
-                  <button
-                    onClick={() => toggleExpand(item.id)}
-                    className="flex w-full items-center gap-3 p-3 text-left"
+        {/* ── Detected materials ── */}
+        {hasResults && !scanning && (
+          <>
+            {/* Material summary strip */}
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {materials.map((m) => {
+                const cat = CATEGORIES[m.category]
+                return (
+                  <div
+                    key={m.id}
+                    className="ai-fade-in flex shrink-0 items-center gap-2 rounded-xl border border-border bg-card px-3 py-2"
                   >
-                    {/* Thumbnail */}
-                    {item.photoUrl && (
-                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
-                        <img
-                          src={item.photoUrl}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
+                    {m.photoUrl && (
+                      <div className="h-8 w-8 shrink-0 overflow-hidden rounded-md bg-muted">
+                        <img src={m.photoUrl} alt="" className="h-full w-full object-cover" />
                       </div>
                     )}
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold">
-                        {item.editTitle}
+                    <div>
+                      <div className="truncate text-xs font-semibold" style={{ maxWidth: 120 }}>
+                        {m.material}
                       </div>
-                      <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-                        <span>{catLabel}</span>
-                        <span className="text-border">·</span>
-                        <span>{item.condition}</span>
-                        <span className="text-border">·</span>
-                        <span className="font-medium text-foreground">
-                          ${item.editPrice || '0'}
-                        </span>
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <span>{cat?.icon}</span>
+                        <span>{cat?.label ?? m.category}</span>
+                        <span className="text-border">&middot;</span>
+                        <span>{m.condition}</span>
                       </div>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <div className="flex items-center gap-1 text-xs text-primary">
-                        <Leaf size={10} />
-                        {item.carbonSaved}kg
-                      </div>
-                      {isExpanded ? (
-                        <ChevronUp size={14} className="text-muted-foreground" />
-                      ) : (
-                        <ChevronDown size={14} className="text-muted-foreground" />
-                      )}
-                    </div>
-                  </button>
+                  </div>
+                )
+              })}
+            </div>
 
-                  {/* Auto-linked request (always visible) */}
-                  {item.linkedRequestId && item.linkedRequestTitle ? (
-                    <button
-                      onClick={() => toggleShare(item.id)}
-                      className={`flex items-center gap-2.5 border-t px-3 py-2 text-left transition-colors ${
-                        item.shareToRequest
-                          ? 'border-primary/20 bg-primary/5'
-                          : 'border-border bg-muted/30'
-                      }`}
+            {/* ── Matching pools to join ── */}
+            {hasPoolsToJoin && (
+              <div className="space-y-2.5">
+                <h3 className="flex items-center gap-2 text-sm font-bold">
+                  <Users size={14} className="text-primary" />
+                  Matching Pools ({pools.length})
+                </h3>
+                <p className="text-[11px] text-muted-foreground">
+                  Buyers looking for what you have. Tap Join All to contribute.
+                </p>
+
+                {pools.map((pool) => {
+                  const cat = CATEGORIES[pool.category]
+                  const remaining = pool.quantity - pool.fulfilledQuantity
+                  return (
+                    <div
+                      key={pool.requestId}
+                      className="ai-fade-in overflow-hidden rounded-xl border border-primary/20 bg-card"
                     >
-                      <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors ${
-                        item.shareToRequest ? 'bg-primary' : 'border border-border bg-card'
-                      }`}>
-                        {item.shareToRequest && <Check size={10} className="text-white" />}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 text-[11px]">
-                          <Link size={9} className={item.shareToRequest ? 'text-primary' : 'text-muted-foreground'} />
-                          <span className={item.shareToRequest ? 'font-semibold text-primary' : 'text-muted-foreground'}>
-                            {item.shareToRequest ? 'Sharing to' : 'Share to'}
-                          </span>
-                          <span className="truncate font-semibold text-foreground">
-                            {item.linkedRequestTitle}
-                          </span>
+                      <div className="p-3.5">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-lg">
+                            {cat?.icon ?? '\u{1F4E6}'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-semibold">{pool.title}</div>
+                            <div className="mt-0.5 text-[11px] text-muted-foreground">
+                              {pool.requester} needs {remaining} {pool.unit} more
+                            </div>
+                          </div>
+                          <Badge
+                            variant={pool.urgency === 'Urgent' ? 'destructive' : pool.urgency === 'This week' ? 'default' : 'secondary'}
+                            className="shrink-0 text-[10px]"
+                          >
+                            {pool.urgency}
+                          </Badge>
+                        </div>
+
+                        {/* Fulfillment bar */}
+                        <div className="mt-3">
+                          <FulfillmentBar
+                            fulfilled={pool.fulfilledQuantity}
+                            total={pool.quantity}
+                            unit={pool.unit}
+                            size="compact"
+                          />
                         </div>
                       </div>
-                      <Users size={10} className="shrink-0 text-muted-foreground" />
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-2 border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
-                      <Clock size={10} />
-                      <span>No buyers yet — will be on selling hold</span>
-                    </div>
-                  )}
 
-                  {/* Expanded edit */}
-                  {isExpanded && (
-                    <div className="space-y-3 border-t border-border px-3 pb-3 pt-3">
-                      {/* AI description */}
-                      <p className="text-xs leading-relaxed text-muted-foreground">
-                        {item.description}
-                      </p>
-
-                      {/* Confidence */}
-                      <Badge variant="secondary" className="text-[10px]">
-                        {item.confidence}% confidence
-                      </Badge>
-
-                      {/* Edit fields */}
-                      <Input
-                        placeholder="Title"
-                        value={item.editTitle}
-                        onChange={(e) => updateItem(item.id, { editTitle: e.target.value })}
-                        className="h-9 text-sm"
-                      />
-                      <div className="flex flex-wrap gap-1.5">
-                        {CATEGORIES.map((c) => (
+                      {/* Contribute amount */}
+                      <div className="flex items-center justify-between border-t border-primary/10 bg-primary/5 px-3.5 py-2">
+                        <span className="text-[11px] font-medium text-primary">Your contribution</span>
+                        <div className="flex items-center gap-2">
                           <button
-                            key={c.id}
-                            onClick={() => updateItem(item.id, { editCategory: c.id })}
-                            className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                              item.editCategory === c.id
-                                ? 'bg-primary text-primary-foreground'
-                                : 'border border-border bg-card text-muted-foreground'
-                            }`}
+                            onClick={() => setPoolAmount(pool.requestId, Math.max(1, pool.contributeAmount - 1))}
+                            className="flex h-6 w-6 items-center justify-center rounded-md border border-primary/20 text-primary"
                           >
-                            {c.label}
+                            <Minus size={10} />
                           </button>
-                        ))}
+                          <span className="min-w-[40px] text-center text-sm font-bold">
+                            {pool.contributeAmount} {pool.unit}
+                          </span>
+                          <button
+                            onClick={() => setPoolAmount(pool.requestId, Math.min(remaining, pool.contributeAmount + 1))}
+                            className="flex h-6 w-6 items-center justify-center rounded-md border border-primary/20 text-primary"
+                          >
+                            <Plus size={10} />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Input
-                          type="number"
-                          placeholder="Price ($)"
-                          value={item.editPrice}
-                          onChange={(e) => updateItem(item.id, { editPrice: e.target.value })}
-                          className="h-9 flex-1 text-sm"
-                        />
-                        <Input
-                          placeholder="Location"
-                          value={item.editLocation}
-                          onChange={(e) => updateItem(item.id, { editLocation: e.target.value })}
-                          className="h-9 flex-1 text-sm"
-                        />
-                      </div>
-                      <button
-                        onClick={() => removeItem(item.id)}
-                        className="flex items-center gap-1.5 text-xs font-medium text-destructive"
-                      >
-                        <Trash2 size={12} />
-                        Remove from batch
-                      </button>
                     </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
+                  )
+                })}
+              </div>
+            )}
 
-        {/* ── Scan more + Location ── */}
-        {items.length > 0 && !showCamera && !scanning && (
-          <div className="space-y-3">
-            {/* Scan more */}
+            {/* ── Selling hold items ── */}
+            {hasHolds && (
+              <div className="space-y-2">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
+                  <Clock size={14} />
+                  Selling Hold
+                </h3>
+                {holdCategories.map((cat) => {
+                  const c = CATEGORIES[cat]
+                  const mat = materials.find((m) => m.category === cat)
+                  return (
+                    <div
+                      key={cat}
+                      className="ai-fade-in flex items-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-3.5 py-3"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-base">
+                        {c?.icon ?? '\u{1F4E6}'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-xs font-semibold">
+                          {mat?.material ?? c?.label ?? cat}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          No active pools — you&apos;ll be notified when a buyer appears
+                        </div>
+                      </div>
+                      <Clock size={14} className="shrink-0 text-muted-foreground" />
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* ── No pools AND no holds (shouldn't happen, but safety) ── */}
+            {!hasPoolsToJoin && !hasHolds && (
+              <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                No matching request pools found. Try scanning different materials.
+              </div>
+            )}
+
+            {/* ── Scan more ── */}
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={startCamera}
-                className="flex-1 gap-2"
-              >
+              <Button variant="outline" onClick={startCamera} className="flex-1 gap-2">
                 <Camera size={16} />
                 Scan more
               </Button>
@@ -805,75 +676,35 @@ export default function PostMaterial() {
               </Button>
             </div>
 
-            {/* Global location */}
-            <Input
-              placeholder="Default location for all items"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="h-10"
-            />
-
-            {/* Summary bar */}
-            <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div className="text-center">
-                  <div className="text-base font-bold">{items.length}</div>
-                  <div className="text-[10px] text-muted-foreground">items</div>
-                </div>
-                <div className="h-6 w-px bg-border" />
-                <div className="text-center">
-                  <div className="text-base font-bold">${totalPrice.toFixed(0)}</div>
-                  <div className="text-[10px] text-muted-foreground">value</div>
-                </div>
-                <div className="h-6 w-px bg-border" />
-                <div className="text-center">
-                  <div className="text-base font-bold text-primary">{totalCarbon}kg</div>
-                  <div className="flex items-center gap-0.5 text-[10px] text-primary">
-                    <Leaf size={8} />
-                    CO2
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-0.5">
-                {linkedCount > 0 && (
-                  <span className="flex items-center gap-1 text-[10px] font-semibold text-primary">
-                    <Link size={9} />
-                    {linkedCount} shared
-                  </span>
-                )}
-                {unmatchedCategories.length > 0 && (
-                  <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <Clock size={9} />
-                    {unmatchedCategories.length} on hold
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Post all */}
+            {/* ── Join All button ── */}
             <Button
               className="w-full gap-2 py-5 text-[15px] font-bold"
-              disabled={!canPost}
-              onClick={handlePostAll}
+              disabled={joining || (!hasPoolsToJoin && !hasHolds)}
+              onClick={handleJoinAll}
             >
-              {posting ? (
+              {joining ? (
                 <span className="flex items-center gap-2">
                   <Loader2 size={16} className="animate-spin" />
-                  Posting & linking...
+                  Joining pools...
                 </span>
-              ) : (
+              ) : hasPoolsToJoin ? (
                 <>
                   <Zap size={16} />
-                  Post & Share {items.length} Item{items.length !== 1 ? 's' : ''}
-                  {linkedCount > 0 && (
-                    <Badge variant="secondary" className="ml-0.5 bg-white/20 text-white text-[10px]">
-                      {linkedCount} linked
-                    </Badge>
+                  Join {pools.length} Pool{pools.length !== 1 ? 's' : ''}
+                  {hasHolds && (
+                    <span className="text-xs opacity-70">+ {holdCategories.length} on hold</span>
                   )}
+                  <ChevronRight size={14} />
+                </>
+              ) : (
+                <>
+                  <Clock size={16} />
+                  Go on Selling Hold
+                  <ChevronRight size={14} />
                 </>
               )}
             </Button>
-          </div>
+          </>
         )}
       </div>
 
@@ -882,9 +713,7 @@ export default function PostMaterial() {
           0%, 100% { top: 15%; }
           50% { top: 80%; }
         }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
@@ -897,26 +726,12 @@ export default function PostMaterial() {
           from { opacity: 0; transform: scale(0.97); }
           to { opacity: 1; transform: scale(1); }
         }
-        .ai-scan-beam {
-          animation: scan-beam 2.5s ease-in-out infinite;
-        }
-        .ai-spin {
-          animation: spin 1s linear infinite;
-        }
-        .ai-fade-in {
-          animation: fade-in 0.35s ease-out both;
-        }
-        .ai-phrase {
-          animation: phrase 0.25s ease-out both;
-        }
-        .ai-camera-in {
-          animation: camera-in 0.3s ease-out both;
-        }
+        .ai-scan-beam { animation: scan-beam 2.5s ease-in-out infinite; }
+        .ai-spin { animation: spin 1s linear infinite; }
+        .ai-fade-in { animation: fade-in 0.35s ease-out both; }
+        .ai-phrase { animation: phrase 0.25s ease-out both; }
+        .ai-camera-in { animation: camera-in 0.3s ease-out both; }
       `}</style>
     </>
   )
-}
-
-function dataUrlToBlob(dataUrl: string): Promise<Blob> {
-  return fetch(dataUrl).then((r) => r.blob())
 }

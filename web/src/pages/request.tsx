@@ -186,9 +186,9 @@ export default function RequestPage() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-lg font-bold">Find Materials</h1>
+            <h1 className="text-lg font-bold">Post a Request</h1>
             <p className="text-[11px] text-muted-foreground">
-              Describe what you need
+              Describe what you need to buy
             </p>
           </div>
         </div>

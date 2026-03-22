@@ -224,25 +224,27 @@ export const seedAll = mutation({
 export const resetAndSeed = mutation({
   args: {},
   handler: async (ctx) => {
-    // Delete all existing listings
+    // Delete all existing data
     const allListings = await ctx.db.query("listings").collect()
-    for (const l of allListings) {
-      await ctx.db.delete(l._id)
-    }
-    // Delete all existing requests
-    const allRequests = await ctx.db.query("requests").collect()
-    for (const r of allRequests) {
-      await ctx.db.delete(r._id)
-    }
+    for (const l of allListings) await ctx.db.delete(l._id)
 
-    // Re-seed
-    for (const listing of SAMPLE_LISTINGS) {
-      await ctx.db.insert("listings", listing)
-    }
+    const allRequests = await ctx.db.query("requests").collect()
+    for (const r of allRequests) await ctx.db.delete(r._id)
+
+    const allContributions = await ctx.db.query("contributions").collect()
+    for (const c of allContributions) await ctx.db.delete(c._id)
+
+    const allWaitlist = await ctx.db.query("waitlist").collect()
+    for (const w of allWaitlist) await ctx.db.delete(w._id)
+
+    const allMessages = await ctx.db.query("messages").collect()
+    for (const m of allMessages) await ctx.db.delete(m._id)
+
+    // Re-seed only requests (pools) — no listings needed
     for (const req of SAMPLE_REQUESTS) {
       await ctx.db.insert("requests", req)
     }
 
-    return { status: "reset and seeded", listings: SAMPLE_LISTINGS.length, requests: SAMPLE_REQUESTS.length }
+    return { status: "reset and seeded", requests: SAMPLE_REQUESTS.length }
   },
 })
