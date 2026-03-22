@@ -1,28 +1,23 @@
 # ScrapYard
 
-Construction surplus materials marketplace with carbon accounting. Built for Hack the Globe 2026 (Sustainable Infrastructure theme).
+Construction surplus marketplace + carbon accounting platform. Built for Hack the Globe 2026 (Sustainable Infrastructure).
+
+Contractors list leftover materials, buyers get them at 30–60% off retail, and every transaction auto-tracks carbon savings for compliance reporting.
 
 ## Project Structure
 
 ```
-scrapyard/          # React + Vite application (the actual app)
+web/                # Next.js + Convex application
+pitch/              # Pitch plan, business model, feedback
 docs/
-  hackathon/        # Official HTG 2026 guides, rubrics, and requirements
-  brainstorming/    # Ideas, research, and early concept docs
-  dev-notes.md      # Development task notes and feature plans
+  hackathon/        # Official HTG 2026 guides & rubrics
+  brainstorming/    # Early research & concept docs
 ```
 
 ## Getting Started
 
 ```bash
-cd scrapyard
+cd web
 bun install
 bun run dev
 ```
-
-## Tech Stack
-
-- React 19 + Vite 8
-- react-router-dom for routing
-- lucide-react for icons
-- Bun as package manager
