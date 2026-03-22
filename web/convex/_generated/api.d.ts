@@ -8,10 +8,12 @@
  * @module
  */
 
+import type * as contributions from "../contributions.js";
 import type * as listings from "../listings.js";
 import type * as messages from "../messages.js";
 import type * as requests from "../requests.js";
 import type * as seed from "../seed.js";
+import type * as waitlist from "../waitlist.js";
 
 import type {
   ApiFromModules,
@@ -20,10 +22,12 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  contributions: typeof contributions;
   listings: typeof listings;
   messages: typeof messages;
   requests: typeof requests;
   seed: typeof seed;
+  waitlist: typeof waitlist;
 }>;
 
 /**

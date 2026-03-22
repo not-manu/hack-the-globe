@@ -5,6 +5,7 @@ import { useAuth } from '@/components/AuthContext'
 import { Search, Leaf, ChevronRight, Zap, MapPin, Package, Megaphone } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { FulfillmentBar } from '@/components/FulfillmentBar'
 import Logo from '@/components/Logo'
 
 const CATEGORIES: Record<string, { label: string; icon: string }> = {
@@ -125,27 +126,29 @@ export default function Home() {
               <div className="space-y-2.5">
                 {requests.map((req) => {
                   const cat = CATEGORIES[req.category]
+                  const isFulfilled = req.status === 'fulfilled'
                   return (
                     <button
                       key={req._id}
-                      onClick={() => router.push(`/browse/${req.category}`)}
-                      className="flex w-full items-start gap-3 rounded-xl border border-border bg-card p-3.5 text-left active:scale-[0.98]"
+                      onClick={() => router.push(`/request/${req._id}`)}
+                      className={`flex w-full flex-col gap-2.5 rounded-xl border bg-card p-3.5 text-left active:scale-[0.98] ${isFulfilled ? 'border-amber-200 bg-amber-50/50' : 'border-border'}`}
                     >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-lg">
-                        {cat?.icon ?? '📦'}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-semibold">
-                          {req.title}
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-lg">
+                          {cat?.icon ?? '\u{1F4E6}'}
                         </div>
-                        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                          <MapPin size={10} />
-                          <span>{req.requester}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-semibold">
+                            {req.title}
+                          </div>
+                          <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <MapPin size={10} />
+                            <span>{req.requester}</span>
+                            <span className="text-border">&middot;</span>
+                            <span>{req.budget || 'Flexible'}</span>
+                          </div>
                         </div>
-                        <div className="mt-1.5 flex items-center gap-2">
-                          <span className="text-xs font-bold text-foreground">
-                            {req.budget || 'Flexible'}
-                          </span>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
                           <Badge
                             variant={
                               req.urgency === 'Urgent'
@@ -158,9 +161,18 @@ export default function Home() {
                           >
                             {req.urgency}
                           </Badge>
+                          <ChevronRight size={14} className="text-muted-foreground" />
                         </div>
                       </div>
-                      <ChevronRight size={14} className="mt-1 shrink-0 text-muted-foreground" />
+                      {/* Fulfillment bar */}
+                      {req.quantity != null && (
+                        <FulfillmentBar
+                          fulfilled={req.fulfilledQuantity ?? 0}
+                          total={req.quantity}
+                          unit={req.unit ?? 'pcs'}
+                          size="compact"
+                        />
+                      )}
                     </button>
                   )
                 })}

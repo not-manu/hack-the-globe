@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { FulfillmentBar } from '@/components/FulfillmentBar'
 import { useAuth } from '@/components/AuthContext'
 
 const CATEGORIES: Record<string, { label: string; icon: string }> = {
@@ -31,6 +32,8 @@ const CATEGORIES: Record<string, { label: string; icon: string }> = {
 type ParsedRequest = {
   title: string
   category: string
+  quantity: number
+  unit: string
   budget: string
   urgency: string
   reply: string
@@ -128,6 +131,8 @@ export default function RequestPage() {
       await createRequest({
         title: msg.data.title,
         category: msg.data.category,
+        quantity: msg.data.quantity,
+        unit: msg.data.unit,
         budget: msg.data.budget,
         urgency: msg.data.urgency,
         requester: username ?? 'Anonymous',
@@ -203,7 +208,6 @@ export default function RequestPage() {
           <div className="space-y-2.5">
             {myRequests.map((req) => {
               const cat = CATEGORIES[req.category]
-              const matchCount = getMatchCount(req.category)
               return (
                 <div
                   key={req._id}
@@ -242,14 +246,20 @@ export default function RequestPage() {
                       <Trash2 size={13} />
                     </button>
                   </div>
+                  {/* Fulfillment bar */}
+                  <div className="border-t border-border px-3.5 py-2.5">
+                    <FulfillmentBar
+                      fulfilled={req.fulfilledQuantity ?? 0}
+                      total={req.quantity ?? 0}
+                      unit={req.unit ?? 'pcs'}
+                      size="compact"
+                    />
+                  </div>
                   <button
-                    onClick={() => router.push(`/browse/${req.category}`)}
+                    onClick={() => router.push(`/request/${req._id}`)}
                     className="flex w-full items-center justify-center gap-1.5 border-t border-border py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-muted"
                   >
-                    {matchCount > 0
-                      ? `Browse ${matchCount} available listing${matchCount !== 1 ? 's' : ''}`
-                      : `Browse ${cat?.label ?? req.category}`
-                    }
+                    View Pool
                     <ChevronRight size={12} />
                   </button>
                 </div>
@@ -297,8 +307,10 @@ export default function RequestPage() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-semibold">{msg.data.title}</div>
-                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                             <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
                               <span>{cat?.label ?? msg.data.category}</span>
+                              <span className="text-border">·</span>
+                              <span className="font-bold text-foreground">{msg.data.quantity} {msg.data.unit}</span>
                               <span className="text-border">·</span>
                               <span className="font-medium text-foreground">{msg.data.budget}</span>
                               <span className="text-border">·</span>

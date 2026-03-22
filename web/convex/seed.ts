@@ -172,6 +172,10 @@ const SAMPLE_REQUESTS = [
     budget: "$200–300",
     urgency: "This week",
     requester: "Jake M.",
+    quantity: 100,
+    unit: "board ft",
+    fulfilledQuantity: 35,
+    status: "open",
   },
   {
     title: "Looking for stainless steel sheet",
@@ -179,6 +183,10 @@ const SAMPLE_REQUESTS = [
     budget: "$150",
     urgency: "Flexible",
     requester: "Priya S.",
+    quantity: 10,
+    unit: "sheets",
+    fulfilledQuantity: 0,
+    status: "open",
   },
   {
     title: "Wanted: sliding barn door hardware",
@@ -186,6 +194,10 @@ const SAMPLE_REQUESTS = [
     budget: "$80–120",
     urgency: "Urgent",
     requester: "Sam T.",
+    quantity: 2,
+    unit: "sets",
+    fulfilledQuantity: 1,
+    status: "open",
   },
 ]
 

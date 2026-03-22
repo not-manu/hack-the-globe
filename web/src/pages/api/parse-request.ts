@@ -26,6 +26,16 @@ const requestSchema = z.object({
       'other',
     ])
     .describe('Best matching category. Use "other" for non-construction items like furniture, appliances, tools, decor, etc.'),
+  quantity: z
+    .number()
+    .describe(
+      'The numeric quantity of items requested. Extract from the message, e.g. "50 bricks" => 50, "a few planks" => 5, "some lumber for decking" => 10. Always provide a reasonable estimate.',
+    ),
+  unit: z
+    .string()
+    .describe(
+      'The unit of measurement, e.g. "pcs", "kg", "meters", "sheets", "bags", "boxes". Default to "pcs" if unclear.',
+    ),
   budget: z
     .string()
     .describe(
@@ -39,7 +49,7 @@ const requestSchema = z.object({
   reply: z
     .string()
     .describe(
-      'A brief, friendly 1-sentence confirmation message to the user summarizing what you understood, e.g. "Got it — looking for ~50 red bricks for a garden wall, flexible budget."',
+      'A brief, friendly 1-sentence confirmation message to the user summarizing what you understood including the quantity, e.g. "Got it — looking for ~50 red bricks for a garden wall, flexible budget."',
     ),
 })
 

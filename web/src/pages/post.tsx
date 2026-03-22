@@ -18,6 +18,8 @@ import {
   Users,
   Check,
   Plus,
+  Link,
+  Clock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -51,6 +53,10 @@ type ScannedItem = {
   editPrice: string
   editCategory: string
   editLocation: string
+  // auto-linking
+  linkedRequestId: string | null
+  linkedRequestTitle: string | null
+  shareToRequest: boolean
 }
 
 type ScanApiResult = {
@@ -78,9 +84,11 @@ let nextItemId = 1
 export default function PostMaterial() {
   const router = useRouter()
   const { username } = useAuth()
-  const requests = useQuery(api.requests.list)
+  const requests = useQuery(api.requests.listOpen)
   const generateUploadUrl = useMutation(api.listings.generateUploadUrl)
   const createListing = useMutation(api.listings.create)
+  const contributeMutation = useMutation(api.contributions.contribute)
+  const addToWaitlist = useMutation(api.waitlist.add)
 
   // Batch state
   const [items, setItems] = useState<ScannedItem[]>([])
@@ -88,6 +96,12 @@ export default function PostMaterial() {
   const [posting, setPosting] = useState(false)
   const [postedId, setPostedId] = useState<string | null>(null)
   const [location, setLocation] = useState('')
+
+  // Post result tracking
+  const [autoResults, setAutoResults] = useState<{
+    contributed: Array<{ title: string; quantity: number; unit: string }>
+    waitlisted: string[]
+  } | null>(null)
 
   // Camera state
   const [showCamera, setShowCamera] = useState(false)
@@ -202,15 +216,26 @@ export default function PostMaterial() {
       }
       const data: ScanApiResult = await res.json()
       if (data.items && data.items.length > 0) {
-        const newItems: ScannedItem[] = data.items.map((item) => ({
-          id: `item-${nextItemId++}`,
-          ...item,
-          photoUrl: dataUrl,
-          editTitle: item.material,
-          editPrice: item.suggestedPrice.replace(/[^0-9.]/g, ''),
-          editCategory: item.category,
-          editLocation: location || '',
-        }))
+        const newItems: ScannedItem[] = data.items.map((item) => {
+          // Auto-match to best open request in same category
+          const matchingReqs = requests?.filter(
+            (r) => r.category === item.category && (r.status === 'open' || !r.status),
+          ) ?? []
+          const bestMatch = matchingReqs.length > 0 ? matchingReqs[0] : null
+
+          return {
+            id: `item-${nextItemId++}`,
+            ...item,
+            photoUrl: dataUrl,
+            editTitle: item.material,
+            editPrice: item.suggestedPrice.replace(/[^0-9.]/g, ''),
+            editCategory: item.category,
+            editLocation: location || '',
+            linkedRequestId: bestMatch?._id ?? null,
+            linkedRequestTitle: bestMatch?.title ?? null,
+            shareToRequest: bestMatch !== null, // auto-ON if match found
+          }
+        })
         setItems((prev) => [...prev, ...newItems])
       } else {
         setScanError('No materials detected in this photo. Try a different angle.')
@@ -240,10 +265,20 @@ export default function PostMaterial() {
     setExpandedId((prev) => (prev === id ? null : id))
   }
 
-  // --- Match counting ---
-  const getMatchCount = (category: string) => {
-    if (!requests) return 0
-    return requests.filter((r) => r.category === category).length
+  // --- Auto-link helpers ---
+  // Count how many items are auto-linked to requests
+  const linkedCount = items.filter((i) => i.shareToRequest && i.linkedRequestId).length
+  const unmatchedCategories = [...new Set(
+    items.filter((i) => !i.linkedRequestId).map((i) => i.editCategory),
+  )]
+
+  // Toggle share for an item
+  const toggleShare = (itemId: string) => {
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === itemId ? { ...i, shareToRequest: !i.shareToRequest } : i,
+      ),
+    )
   }
 
   // --- Post all ---
@@ -309,6 +344,56 @@ export default function PostMaterial() {
         items: listingItems,
       })
 
+      // --- Auto-contribute to linked requests ---
+      const contributed: Array<{ title: string; quantity: number; unit: string }> = []
+      const itemsToShare = items.filter((i) => i.shareToRequest && i.linkedRequestId)
+      for (const item of itemsToShare) {
+        try {
+          const req = requests?.find((r) => r._id === item.linkedRequestId)
+          if (req && (req.status === 'open' || !req.status)) {
+            const remaining = (req.quantity ?? 0) - (req.fulfilledQuantity ?? 0)
+            const shareQty = Math.max(1, Math.min(1, remaining))
+            if (shareQty > 0 && remaining > 0) {
+              await contributeMutation({
+                requestId: item.linkedRequestId as Id<'requests'>,
+                contributor: username ?? 'Anonymous',
+                quantity: shareQty,
+              })
+              contributed.push({
+                title: req.title,
+                quantity: shareQty,
+                unit: req.unit ?? 'pcs',
+              })
+            }
+          }
+        } catch (err) {
+          console.error('Auto-contribute error:', err)
+        }
+      }
+
+      // --- Auto-join waitlist for unmatched categories ---
+      const waitlisted: string[] = []
+      const unmatchedCats = [...new Set(
+        items.filter((i) => !i.linkedRequestId).map((i) => i.editCategory),
+      )]
+      for (const cat of unmatchedCats) {
+        try {
+          const catItem = items.find((i) => i.editCategory === cat)
+          await addToWaitlist({
+            seller: username ?? 'Anonymous',
+            category: cat,
+            material: catItem?.editTitle ?? cat,
+            quantity: 1,
+            unit: 'pcs',
+          })
+          const catLabel = CATEGORIES.find((c) => c.id === cat)?.label ?? cat
+          waitlisted.push(catLabel)
+        } catch (err) {
+          console.error('Auto-waitlist error:', err)
+        }
+      }
+
+      setAutoResults({ contributed, waitlisted })
       setPostedId(newId as unknown as string)
     } catch (err) {
       console.error('Failed to post listing:', err)
@@ -327,15 +412,17 @@ export default function PostMaterial() {
         </div>
         <div className="text-center">
           <h2 className="text-2xl font-bold">
-            Listing posted!
+            Listed & Shared!
           </h2>
           <p className="mt-1 text-sm font-medium text-foreground">
             {items.length} item{items.length !== 1 ? 's' : ''} listed
           </p>
-          <p className="mx-auto mt-2 max-w-[260px] text-sm text-muted-foreground">
-            Matching with nearby buyers. You&apos;ll be notified when someone&apos;s interested.
+          <p className="mx-auto mt-2 max-w-[280px] text-sm text-muted-foreground">
+            Your materials are live. Everything has been auto-linked.
           </p>
         </div>
+
+        {/* Stats bar */}
         <div className="flex items-center gap-4 rounded-xl bg-primary/5 px-6 py-3">
           <div className="text-center">
             <div className="text-lg font-bold">${totalPrice.toFixed(0)}</div>
@@ -350,6 +437,38 @@ export default function PostMaterial() {
             </div>
           </div>
         </div>
+
+        {/* Auto-link results */}
+        {autoResults && (autoResults.contributed.length > 0 || autoResults.waitlisted.length > 0) && (
+          <div className="w-full max-w-[320px] space-y-2">
+            {autoResults.contributed.map((c, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-2.5 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <Link size={12} className="text-primary" />
+                </div>
+                <div className="min-w-0 flex-1 text-xs">
+                  <span className="font-bold text-primary">Shared {c.quantity} {c.unit}</span>
+                  <span className="text-muted-foreground"> to </span>
+                  <span className="font-semibold text-foreground">{c.title}</span>
+                </div>
+              </div>
+            ))}
+            {autoResults.waitlisted.length > 0 && (
+              <div className="flex items-center gap-2.5 rounded-xl border border-border bg-muted/50 px-3.5 py-2.5">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+                  <Clock size={12} className="text-muted-foreground" />
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground">On selling hold</span> for {autoResults.waitlisted.join(', ')} — you&apos;ll be notified when a buyer appears
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex w-full max-w-[280px] gap-2">
           <Button
             className="flex-1"
@@ -513,7 +632,6 @@ export default function PostMaterial() {
           <div className="space-y-2.5">
             {items.map((item, index) => {
               const isExpanded = expandedId === item.id
-              const matchCount = getMatchCount(item.editCategory)
               const catLabel = CATEGORIES.find((c) => c.id === item.editCategory)?.label ?? item.editCategory
 
               return (
@@ -552,12 +670,6 @@ export default function PostMaterial() {
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      {matchCount > 0 && (
-                        <Badge variant="default" className="gap-1 text-[10px]">
-                          <Users size={10} />
-                          {matchCount}
-                        </Badge>
-                      )}
                       <div className="flex items-center gap-1 text-xs text-primary">
                         <Leaf size={10} />
                         {item.carbonSaved}kg
@@ -570,6 +682,41 @@ export default function PostMaterial() {
                     </div>
                   </button>
 
+                  {/* Auto-linked request (always visible) */}
+                  {item.linkedRequestId && item.linkedRequestTitle ? (
+                    <button
+                      onClick={() => toggleShare(item.id)}
+                      className={`flex items-center gap-2.5 border-t px-3 py-2 text-left transition-colors ${
+                        item.shareToRequest
+                          ? 'border-primary/20 bg-primary/5'
+                          : 'border-border bg-muted/30'
+                      }`}
+                    >
+                      <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors ${
+                        item.shareToRequest ? 'bg-primary' : 'border border-border bg-card'
+                      }`}>
+                        {item.shareToRequest && <Check size={10} className="text-white" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 text-[11px]">
+                          <Link size={9} className={item.shareToRequest ? 'text-primary' : 'text-muted-foreground'} />
+                          <span className={item.shareToRequest ? 'font-semibold text-primary' : 'text-muted-foreground'}>
+                            {item.shareToRequest ? 'Sharing to' : 'Share to'}
+                          </span>
+                          <span className="truncate font-semibold text-foreground">
+                            {item.linkedRequestTitle}
+                          </span>
+                        </div>
+                      </div>
+                      <Users size={10} className="shrink-0 text-muted-foreground" />
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2 border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
+                      <Clock size={10} />
+                      <span>No buyers yet — will be on selling hold</span>
+                    </div>
+                  )}
+
                   {/* Expanded edit */}
                   {isExpanded && (
                     <div className="space-y-3 border-t border-border px-3 pb-3 pt-3">
@@ -578,22 +725,10 @@ export default function PostMaterial() {
                         {item.description}
                       </p>
 
-                      {/* Confidence & match */}
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-[10px]">
-                          {item.confidence}% confidence
-                        </Badge>
-                        {matchCount > 0 ? (
-                          <Badge variant="default" className="gap-1 text-[10px]">
-                            <Users size={10} />
-                            {matchCount} buyer{matchCount !== 1 ? 's' : ''} looking
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px]">
-                            No buyers yet
-                          </Badge>
-                        )}
-                      </div>
+                      {/* Confidence */}
+                      <Badge variant="secondary" className="text-[10px]">
+                        {item.confidence}% confidence
+                      </Badge>
 
                       {/* Edit fields */}
                       <Input
@@ -699,9 +834,19 @@ export default function PostMaterial() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Users size={12} />
-                {items.reduce((sum, i) => sum + getMatchCount(i.editCategory), 0)} matches
+              <div className="flex flex-col items-end gap-0.5">
+                {linkedCount > 0 && (
+                  <span className="flex items-center gap-1 text-[10px] font-semibold text-primary">
+                    <Link size={9} />
+                    {linkedCount} shared
+                  </span>
+                )}
+                {unmatchedCategories.length > 0 && (
+                  <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <Clock size={9} />
+                    {unmatchedCategories.length} on hold
+                  </span>
+                )}
               </div>
             </div>
 
@@ -714,12 +859,17 @@ export default function PostMaterial() {
               {posting ? (
                 <span className="flex items-center gap-2">
                   <Loader2 size={16} className="animate-spin" />
-                  Posting...
+                  Posting & linking...
                 </span>
               ) : (
                 <>
-                  <Plus size={16} />
-                  Post {items.length} Item{items.length !== 1 ? 's' : ''} · ${totalPrice.toFixed(0)}
+                  <Zap size={16} />
+                  Post & Share {items.length} Item{items.length !== 1 ? 's' : ''}
+                  {linkedCount > 0 && (
+                    <Badge variant="secondary" className="ml-0.5 bg-white/20 text-white text-[10px]">
+                      {linkedCount} linked
+                    </Badge>
+                  )}
                 </>
               )}
             </Button>

@@ -44,7 +44,30 @@ export default defineSchema({
     budget: v.string(),
     urgency: v.string(),
     requester: v.string(),
-  }),
+    quantity: v.optional(v.number()),
+    unit: v.optional(v.string()),
+    fulfilledQuantity: v.optional(v.number()),
+    status: v.optional(v.string()), // "open" | "fulfilled" | "closed"
+  }).index("by_status", ["status"]),
+
+  contributions: defineTable({
+    requestId: v.id("requests"),
+    contributor: v.string(),
+    quantity: v.number(),
+    note: v.optional(v.string()),
+    images: v.optional(v.array(v.id("_storage"))),
+  }).index("by_requestId", ["requestId"]),
+
+  waitlist: defineTable({
+    seller: v.string(),
+    category: v.string(),
+    material: v.string(),
+    quantity: v.number(),
+    unit: v.string(),
+    images: v.optional(v.array(v.id("_storage"))),
+    status: v.string(), // "waiting" | "matched" | "cancelled"
+  }).index("by_seller", ["seller"])
+    .index("by_category_and_status", ["category", "status"]),
 
   messages: defineTable({
     listingId: v.id("listings"),
