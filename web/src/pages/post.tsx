@@ -24,16 +24,16 @@ import { Badge } from '@/components/ui/badge'
 import { FulfillmentBar } from '@/components/FulfillmentBar'
 import { useAuth } from '@/components/AuthContext'
 
-const CATEGORIES: Record<string, { label: string; icon: string }> = {
-  lumber: { label: 'Lumber', icon: '\u{1FAB5}' },
-  steel: { label: 'Steel', icon: '\u{1F529}' },
-  concrete: { label: 'Concrete', icon: '\u{1F9F1}' },
-  brick: { label: 'Brick', icon: '\u{1F3D7}\u{FE0F}' },
-  glass: { label: 'Glass', icon: '\u{1FA9F}' },
-  pipe: { label: 'Piping', icon: '\u{1F527}' },
-  electrical: { label: 'Electrical', icon: '\u{1F4A1}' },
-  fixtures: { label: 'Fixtures', icon: '\u{1F6BF}' },
-  other: { label: 'Other', icon: '\u{1F4E6}' },
+const CATEGORIES: Record<string, { label: string; img: string }> = {
+  lumber: { label: 'Lumber', img: 'https://images.unsplash.com/photo-1520333789090-1afc82db536a?w=200&h=200&fit=crop' },
+  steel: { label: 'Steel', img: 'https://images.unsplash.com/photo-1530982011887-3cc11cc85693?w=200&h=200&fit=crop' },
+  concrete: { label: 'Concrete', img: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=200&fit=crop' },
+  brick: { label: 'Brick', img: 'https://images.unsplash.com/photo-1590075865003-e48277faa558?w=200&h=200&fit=crop' },
+  glass: { label: 'Glass', img: 'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=200&h=200&fit=crop' },
+  pipe: { label: 'Piping', img: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=200&h=200&fit=crop' },
+  electrical: { label: 'Electrical', img: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=200&h=200&fit=crop' },
+  fixtures: { label: 'Fixtures', img: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=200&h=200&fit=crop' },
+  other: { label: 'Other', img: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200&h=200&fit=crop' },
 }
 
 type DetectedMaterial = {
@@ -540,7 +540,6 @@ export default function ScanToSell() {
                         {m.material}
                       </div>
                       <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                        <span>{cat?.icon}</span>
                         <span>{cat?.label ?? m.category}</span>
                         <span className="text-border">&middot;</span>
                         <span>{m.condition}</span>
@@ -572,8 +571,8 @@ export default function ScanToSell() {
                     >
                       <div className="p-3.5">
                         <div className="flex items-start gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-lg">
-                            {cat?.icon ?? '\u{1F4E6}'}
+                          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-muted">
+                            <img src={cat?.img ?? CATEGORIES.other.img} alt="" className="h-full w-full object-cover" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-semibold">{pool.title}</div>
@@ -642,8 +641,8 @@ export default function ScanToSell() {
                       key={cat}
                       className="ai-fade-in flex items-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-3.5 py-3"
                     >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-base">
-                        {c?.icon ?? '\u{1F4E6}'}
+                      <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-muted">
+                        <img src={c?.img ?? CATEGORIES.other.img} alt="" className="h-full w-full object-cover" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-xs font-semibold">

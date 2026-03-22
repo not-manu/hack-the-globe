@@ -2,21 +2,48 @@ import { useRouter } from 'next/router'
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import { useAuth } from '@/components/AuthContext'
-import { Search, Leaf, ChevronRight, Camera, MapPin, Megaphone } from 'lucide-react'
+import { Leaf, ChevronRight, Camera, MapPin, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { FulfillmentBar } from '@/components/FulfillmentBar'
 import Logo from '@/components/Logo'
 
-const CATEGORIES: Record<string, { label: string; icon: string }> = {
-  lumber: { label: 'Lumber', icon: '\u{1FAB5}' },
-  steel: { label: 'Steel', icon: '\u{1F529}' },
-  concrete: { label: 'Concrete', icon: '\u{1F9F1}' },
-  brick: { label: 'Brick', icon: '\u{1F3D7}\u{FE0F}' },
-  glass: { label: 'Glass', icon: '\u{1FA9F}' },
-  pipe: { label: 'Piping', icon: '\u{1F527}' },
-  electrical: { label: 'Electrical', icon: '\u{1F4A1}' },
-  fixtures: { label: 'Fixtures', icon: '\u{1F6BF}' },
-  other: { label: 'Other', icon: '\u{1F4E6}' },
+const CATEGORY_IMAGES: Record<string, { label: string; img: string }> = {
+  lumber: {
+    label: 'Lumber',
+    img: 'https://images.unsplash.com/photo-1520333789090-1afc82db536a?w=400&h=400&fit=crop',
+  },
+  steel: {
+    label: 'Steel',
+    img: 'https://images.unsplash.com/photo-1530982011887-3cc11cc85693?w=400&h=400&fit=crop',
+  },
+  concrete: {
+    label: 'Concrete',
+    img: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop',
+  },
+  brick: {
+    label: 'Brick',
+    img: 'https://images.unsplash.com/photo-1590075865003-e48277faa558?w=400&h=400&fit=crop',
+  },
+  glass: {
+    label: 'Glass',
+    img: 'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=400&h=400&fit=crop',
+  },
+  pipe: {
+    label: 'Piping',
+    img: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&h=400&fit=crop',
+  },
+  electrical: {
+    label: 'Electrical',
+    img: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400&h=400&fit=crop',
+  },
+  fixtures: {
+    label: 'Fixtures',
+    img: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400&h=400&fit=crop',
+  },
+  other: {
+    label: 'Other',
+    img: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop',
+  },
 }
 
 export default function Home() {
@@ -24,151 +51,195 @@ export default function Home() {
   const { username } = useAuth()
   const requests = useQuery(api.requests.list)
 
-  // Rough carbon estimate from all request contributions
   const totalRequests = requests?.length ?? 0
-  void username // used by auth context
+  const openPools = requests?.filter((r) => r.status === 'open' || !r.status) ?? []
+  void username
 
   return (
     <>
       {/* Header */}
-      <div className="px-5 pt-5 pb-2">
+      <div className="px-5 pt-5 pb-3">
         <div className="flex items-center justify-between">
           <Logo height={26} />
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-            <Leaf size={14} />
-            <span>{totalRequests} active pools</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 rounded-full bg-primary/8 px-3 py-1 text-[11px] font-semibold text-primary">
+              <Leaf size={12} />
+              {totalRequests} pool{totalRequests !== 1 ? 's' : ''}
+            </div>
           </div>
         </div>
       </div>
 
       <div className="space-y-5 px-5 pb-6">
-        {/* Search */}
-        <button
-          onClick={() => router.push('/browse/all')}
-          className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left"
-        >
-          <Search size={18} className="text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">
-            Search materials...
-          </span>
-        </button>
-
-        {/* Scan to Sell CTA */}
+        {/* Scan CTA */}
         <button
           onClick={() => router.push('/post?scan=1')}
-          className="flex w-full items-center gap-3.5 rounded-xl bg-primary p-4 text-left active:scale-[0.98]"
+          className="group relative w-full overflow-hidden rounded-2xl bg-neutral-900 text-left active:scale-[0.98]"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-            <Camera size={20} className="text-white" />
-          </div>
-          <div className="flex-1">
-            <div className="text-sm font-bold text-white">Scan to Sell</div>
-            <div className="text-xs text-white/70">
-              Snap a photo — join buyer pools instantly
+          <div className="absolute inset-0 bg-gradient-to-r from-neutral-900 via-neutral-900/90 to-neutral-900/40" />
+          <img
+            src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&h=400&fit=crop"
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-40 transition-transform duration-500 group-hover:scale-105"
+          />
+          <div className="relative flex items-center gap-4 p-5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm">
+              <Camera size={22} className="text-white" />
             </div>
+            <div className="flex-1">
+              <div className="text-[15px] font-bold text-white">Scan to Sell</div>
+              <div className="mt-0.5 text-xs text-white/60">
+                AI matches your materials to active buyer pools
+              </div>
+            </div>
+            <ChevronRight size={18} className="text-white/40" />
           </div>
-          <ChevronRight size={16} className="text-white/60" />
         </button>
 
         {/* Active Pools */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Megaphone size={14} className="text-primary" />
-              <h2 className="text-sm font-bold">Active Pools</h2>
-              {requests && (
-                <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
-                  {requests.length}
-                </Badge>
-              )}
-            </div>
+            <h2 className="text-[15px] font-bold tracking-tight">Active Pools</h2>
             <button
               onClick={() => router.push('/request')}
-              className="flex items-center gap-0.5 text-xs font-medium text-primary"
+              className="flex items-center gap-0.5 text-xs font-semibold text-primary"
             >
               Post request <ChevronRight size={14} />
             </button>
           </div>
 
-          <p className="text-[11px] text-muted-foreground">
-            Buyers looking for materials — scan yours to join a pool
-          </p>
-
           {requests === undefined ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="animate-pulse rounded-xl border border-border bg-card p-4">
-                  <div className="flex gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-muted" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-3 w-3/4 rounded bg-muted" />
-                      <div className="h-3 w-1/2 rounded bg-muted" />
-                    </div>
+                <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-border bg-card">
+                  <div className="h-32 bg-muted" />
+                  <div className="space-y-2 p-4">
+                    <div className="h-3.5 w-3/4 rounded bg-muted" />
+                    <div className="h-3 w-1/2 rounded bg-muted" />
+                    <div className="h-2 w-full rounded-full bg-muted" />
                   </div>
                 </div>
               ))}
             </div>
           ) : requests.length > 0 ? (
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {requests.map((req) => {
-                const cat = CATEGORIES[req.category]
+                const cat = CATEGORY_IMAGES[req.category] ?? CATEGORY_IMAGES.other
                 const isFulfilled = req.status === 'fulfilled'
+                const pct = req.quantity
+                  ? Math.round(((req.fulfilledQuantity ?? 0) / req.quantity) * 100)
+                  : 0
+
                 return (
                   <button
                     key={req._id}
                     onClick={() => router.push(`/request/${req._id}`)}
-                    className={`flex w-full flex-col gap-2.5 rounded-xl border bg-card p-3.5 text-left active:scale-[0.98] ${isFulfilled ? 'border-amber-200 bg-amber-50/50' : 'border-border'}`}
+                    className={`group w-full overflow-hidden rounded-2xl border bg-card text-left transition-all active:scale-[0.98] ${
+                      isFulfilled ? 'border-amber-300/50' : 'border-border'
+                    }`}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-lg">
-                        {cat?.icon ?? '\u{1F4E6}'}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-semibold">
-                          {req.title}
-                        </div>
-                        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                          <MapPin size={10} />
-                          <span>{req.requester}</span>
-                          <span className="text-border">&middot;</span>
-                          <span>{req.budget || 'Flexible'}</span>
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 flex-col items-end gap-1">
+                    {/* Image */}
+                    <div className="relative h-36 overflow-hidden bg-muted">
+                      <img
+                        src={cat.img}
+                        alt={cat.label}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                      {/* Overlaid badges */}
+                      <div className="absolute left-3 top-3 flex gap-1.5">
+                        <Badge
+                          variant={isFulfilled ? 'default' : 'secondary'}
+                          className="bg-white/90 text-[10px] font-semibold text-neutral-800 backdrop-blur-sm"
+                        >
+                          {cat.label}
+                        </Badge>
                         <Badge
                           variant={
                             req.urgency === 'Urgent'
                               ? 'destructive'
-                              : req.urgency === 'This week'
-                                ? 'default'
-                                : 'secondary'
+                              : 'secondary'
                           }
-                          className="h-5 px-1.5 text-[10px]"
+                          className={req.urgency === 'Urgent' ? '' : 'bg-white/90 text-neutral-800 backdrop-blur-sm'}
                         >
                           {req.urgency}
                         </Badge>
-                        <ChevronRight size={14} className="text-muted-foreground" />
                       </div>
+
+                      {/* Progress pill overlay */}
+                      {req.quantity != null && (
+                        <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
+                          <Users size={10} />
+                          {pct}% filled
+                        </div>
+                      )}
                     </div>
-                    {/* Fulfillment bar */}
-                    {req.quantity != null && (
-                      <FulfillmentBar
-                        fulfilled={req.fulfilledQuantity ?? 0}
-                        total={req.quantity}
-                        unit={req.unit ?? 'pcs'}
-                        size="compact"
-                      />
-                    )}
+
+                    {/* Content */}
+                    <div className="p-3.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate text-sm font-bold">
+                            {req.title}
+                          </h3>
+                          <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <MapPin size={10} />
+                            <span>{req.requester}</span>
+                            <span className="text-border">&middot;</span>
+                            <span>{req.budget || 'Flexible'}</span>
+                            {req.quantity != null && (
+                              <>
+                                <span className="text-border">&middot;</span>
+                                <span className="font-medium text-foreground">
+                                  {req.fulfilledQuantity ?? 0}/{req.quantity} {req.unit ?? 'pcs'}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <ChevronRight size={16} className="mt-0.5 shrink-0 text-muted-foreground" />
+                      </div>
+
+                      {/* Fulfillment bar */}
+                      {req.quantity != null && (
+                        <div className="mt-2.5">
+                          <FulfillmentBar
+                            fulfilled={req.fulfilledQuantity ?? 0}
+                            total={req.quantity}
+                            unit={req.unit ?? 'pcs'}
+                            size="compact"
+                            showLabel={false}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </button>
                 )
               })}
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              No active pools yet — post a request for what you need
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border p-10 text-center">
+              <div className="text-sm font-medium text-muted-foreground">
+                No active pools yet
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Post a request for materials you need
+              </p>
             </div>
           )}
         </div>
+
+        {/* Open pools count footer */}
+        {openPools.length > 0 && (
+          <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
+            <Leaf size={11} className="text-primary" />
+            <span>
+              {openPools.length} open pool{openPools.length !== 1 ? 's' : ''} waiting for contributors
+            </span>
+          </div>
+        )}
       </div>
     </>
   )

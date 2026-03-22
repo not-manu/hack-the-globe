@@ -19,16 +19,16 @@ import { Button } from '@/components/ui/button'
 import { FulfillmentBar } from '@/components/FulfillmentBar'
 import { useAuth } from '@/components/AuthContext'
 
-const CATEGORIES: Record<string, { label: string; icon: string }> = {
-  lumber: { label: 'Lumber', icon: '\u{1FAB5}' },
-  steel: { label: 'Steel', icon: '\u{1F529}' },
-  concrete: { label: 'Concrete', icon: '\u{1F9F1}' },
-  brick: { label: 'Brick', icon: '\u{1F3D7}\u{FE0F}' },
-  glass: { label: 'Glass', icon: '\u{1FA9F}' },
-  pipe: { label: 'Piping', icon: '\u{1F527}' },
-  electrical: { label: 'Electrical', icon: '\u{1F4A1}' },
-  fixtures: { label: 'Fixtures', icon: '\u{1F6BF}' },
-  other: { label: 'Other', icon: '\u{1F4E6}' },
+const CATEGORIES: Record<string, { label: string; img: string }> = {
+  lumber: { label: 'Lumber', img: 'https://images.unsplash.com/photo-1520333789090-1afc82db536a?w=400&h=400&fit=crop' },
+  steel: { label: 'Steel', img: 'https://images.unsplash.com/photo-1530982011887-3cc11cc85693?w=400&h=400&fit=crop' },
+  concrete: { label: 'Concrete', img: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop' },
+  brick: { label: 'Brick', img: 'https://images.unsplash.com/photo-1590075865003-e48277faa558?w=400&h=400&fit=crop' },
+  glass: { label: 'Glass', img: 'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=400&h=400&fit=crop' },
+  pipe: { label: 'Piping', img: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&h=400&fit=crop' },
+  electrical: { label: 'Electrical', img: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400&h=400&fit=crop' },
+  fixtures: { label: 'Fixtures', img: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400&h=400&fit=crop' },
+  other: { label: 'Other', img: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop' },
 }
 
 export default function RequestDetail() {
@@ -138,48 +138,45 @@ export default function RequestDetail() {
         <div className="space-y-5 px-5 py-5">
           {/* Request info card */}
           <div className="animate-fade-up overflow-hidden rounded-2xl border border-border bg-card">
-            <div className="p-5">
-              <div className="flex items-start gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-muted text-2xl">
-                  {cat?.icon ?? '\u{1F4E6}'}
+            {/* Category hero image */}
+            <div className="relative h-40 overflow-hidden bg-muted">
+              <img
+                src={cat?.img ?? CATEGORIES.other.img}
+                alt={cat?.label ?? request.category}
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+              <div className="absolute bottom-3 left-4 right-4">
+                <h2 className="text-[17px] font-bold leading-tight text-white">
+                  {request.title}
+                </h2>
+                <div className="mt-1 flex items-center gap-2 text-[11px] text-white/70">
+                  <span className="font-medium text-white/90">{cat?.label ?? request.category}</span>
+                  <span>&middot;</span>
+                  <span>{request.budget || 'Flexible'}</span>
+                  <span>&middot;</span>
+                  <span>by {request.requester}</span>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-base font-bold leading-tight">
-                    {request.title}
-                  </h2>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">
-                      {cat?.label ?? request.category}
-                    </span>
-                    <span className="text-border">&middot;</span>
-                    <span>{request.budget || 'Flexible'}</span>
-                    <span className="text-border">&middot;</span>
-                    <Badge
-                      variant={
-                        request.urgency === 'Urgent'
-                          ? 'destructive'
-                          : request.urgency === 'This week'
-                            ? 'default'
-                            : 'secondary'
-                      }
-                      className="h-5 px-1.5 text-[10px]"
-                    >
-                      <Clock size={9} className="mr-0.5" />
-                      {request.urgency}
-                    </Badge>
-                  </div>
-                  <p className="mt-1.5 text-[11px] text-muted-foreground">
-                    Requested by{' '}
-                    <span className="font-semibold text-foreground">
-                      {request.requester}
-                    </span>
-                  </p>
-                </div>
+              </div>
+              <div className="absolute right-3 top-3">
+                <Badge
+                  variant={
+                    request.urgency === 'Urgent'
+                      ? 'destructive'
+                      : request.urgency === 'This week'
+                        ? 'default'
+                        : 'secondary'
+                  }
+                  className="text-[10px]"
+                >
+                  <Clock size={9} className="mr-0.5" />
+                  {request.urgency}
+                </Badge>
               </div>
             </div>
 
             {/* Fulfillment bar */}
-            <div className="border-t border-border bg-muted/30 px-5 py-4">
+            <div className="px-4 py-4">
               <FulfillmentBar
                 fulfilled={fulfilledQty}
                 total={qty}

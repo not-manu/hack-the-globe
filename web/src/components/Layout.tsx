@@ -1,9 +1,9 @@
 import { useRouter } from 'next/router'
-import { Home, Search, Plus, BarChart3, User } from 'lucide-react'
+import { Home, Plus, BarChart3, User, Clock } from 'lucide-react'
 
 const NAV_ITEMS = [
   { path: '/', icon: Home, label: 'Home' },
-  { path: '/browse/all', icon: Search, label: 'Browse' },
+  { path: '/hold', icon: Clock, label: 'Hold' },
   { path: '/request', icon: Plus, label: 'Request', isCenter: true },
   { path: '/carbon', icon: BarChart3, label: 'Impact' },
   { path: '/profile', icon: User, label: 'Profile' },
